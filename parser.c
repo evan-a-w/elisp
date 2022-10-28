@@ -58,17 +58,16 @@ void free_ast(ast_t *ast) {
 }
 
 ast_t *parse_inside_sexpr(tokeniser_t *t) {
-    token_t curr_token;
     ast_t *res = malloc(sizeof *res);
-    sexpr_t *s = malloc(sizeof *s);
+    sexpr_t *s = NULL;
     *res = (ast_t) { .type = SExpr, .l = s };
-    *s = (sexpr_t) { .val = NULL, .next = NULL };
     for (;;) {
-        curr_token = peek_token(t);
+        token_t curr_token = peek_token(t);
         if (error_token(&curr_token)) {
             free_ast(res);
             return tok_to_error_ast(&curr_token);
         } else if (curr_token.tok == RParen) {
+            next_token(t);
             return res;
         }
 
@@ -78,8 +77,10 @@ ast_t *parse_inside_sexpr(tokeniser_t *t) {
             return next;
         }
 
-        if (s->val == NULL) {
-            s->val = next;
+        if (s == NULL) {
+            s = malloc(sizeof *s);
+            *s = (sexpr_t) { .val = next, .next = NULL };
+            res->l = s;
         } else {
             sexpr_t *new_s = malloc(sizeof *new_s);
             *new_s = (sexpr_t) { .val = next, .next = NULL };
@@ -119,6 +120,7 @@ ast_t *parse_one(tokeniser_t *t) {
 
 program_t *parse(tokeniser_t *t) {
     program_t *res = NULL;
+    program_t *curr = NULL;
     while (!is_eof(t)) {
         ast_t *next = parse_one(t);
         if (next->type == AstError) {
@@ -131,9 +133,10 @@ program_t *parse(tokeniser_t *t) {
         program_t *new_p = malloc(sizeof *new_p);
         *new_p = (program_t) { .ast = next, .next = NULL };
         if (res == NULL) {
-            res = new_p;
+            res = curr = new_p;
         } else {
-            res->next = new_p;
+            curr->next = new_p;
+            curr = new_p;
         }
     }
     return res;

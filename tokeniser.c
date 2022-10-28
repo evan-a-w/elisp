@@ -27,7 +27,7 @@ void free_token(token_t t) {
 }
 
 bool is_ident_start(char c) {
-    char *others = "_-+*/%&|!^~?:'";
+    char *others = "_-+*/%&|!^~?:'><=";
     for (unsigned i = 0; i < strlen(others); i++) {
         if (c == others[i]) {
             return true;
@@ -66,7 +66,7 @@ char *read_while(tokeniser_t *t, bool (*pred)(char)) {
     return s;
 }
 
-token_t next_token_(tokeniser_t *t) {
+token_t next_token(tokeniser_t *t) {
     if (t->last_token.tok != None) {
         token_t temp =  t->last_token;
         t->last_token.tok = None;
@@ -156,12 +156,6 @@ token_t next_token_(tokeniser_t *t) {
     return (token_t) { .tok = None, .line = line, .col = col };
 }
 
-token_t next_token(tokeniser_t *tokeniser) {
-    token_t t = next_token_(tokeniser);
-    fprintf(stderr, "%s\n", token_to_string(&t));
-    return t;
-}
-
 void next_peek(tokeniser_t *t) {
     if (t->last_token.tok == None) {
         t->last_token = next_token(t);
@@ -222,6 +216,7 @@ char *token_to_string(token_t *t) {
         break;
     case Int:
         fst = malloc(100);
+        *fst = 0;
         sprintf(fst, "%lld", t->i);
         break;
     case LParen:
@@ -247,8 +242,11 @@ char *token_to_string(token_t *t) {
     }
 
     char *buf = malloc(100);
+    *buf = 0;
     sprintf(buf, " at line %d, col %d", t->line, t->col);
     char *res = malloc(strlen(fst) + strlen(buf) + 1);
+    strcpy(res, fst);
+    strcat(res, buf);
     free(buf);
     if (t->tok == Int)
         free(fst);
