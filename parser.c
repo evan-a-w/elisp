@@ -109,7 +109,7 @@ ast_t *parse_one(tokeniser_t *t) {
         char *token = token_to_string(&curr_token);
         char *fst = "Unexpected token: ";
         char *res = malloc(strlen(fst) + strlen(token) + 1);
-        strcat(res, fst);
+        strcpy(res, fst);
         strcat(res, token);
         free(token);
         return make_ast((ast_t) { .type = AstError, .s = res });
@@ -174,5 +174,29 @@ void print_program(FILE *f, program_t *p) {
         print_ast(f, p->ast);
         printf("\n");
         print_program(f, p->next);
+    }
+}
+
+void debug_print_ast(ast_t *ast) {
+    fprintf(stderr, "AST: { type: %d }", ast->type);
+    switch (ast->type) {
+    case AstError:
+        fprintf(stderr, ", { s: %s }", ast->s);
+        break;
+    case AtomString:
+        fprintf(stderr, ", { s: %s }", ast->s);
+        break;
+    case AtomIdent:
+        fprintf(stderr, ", { s: %s }", ast->s);
+        break;
+    case AtomInt:
+        fprintf(stderr, ", { i: %lld }", ast->i);
+        break;
+    case SExpr:
+        fprintf(stderr, ", { l: %p }", (void *)ast->l);
+        break;
+    default:
+        fprintf(stderr, ", { unknown }");
+        break;
     }
 }

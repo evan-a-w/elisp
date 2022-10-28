@@ -37,5 +37,6 @@ ast_t *parse_one(tokeniser_t *tokeniser);
 program_t *parse(tokeniser_t *tokeniser);
 void print_ast(FILE *f, ast_t *ast);
 void print_program(FILE *f, program_t *program);
+void debug_print_ast(ast_t *ast);
 
 #endif

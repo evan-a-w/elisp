@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g
+CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 
 all: main
 

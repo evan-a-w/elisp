@@ -53,7 +53,7 @@ char *read_while(tokeniser_t *t, bool (*pred)(char)) {
     while (pred(t->buf[t->pos])) {
         if (t->buf[t->pos] == '\n') {
             t->line++;
-            t->col = 0;
+            t->col = 1;
         } else {
             t->col++;
         }
@@ -66,7 +66,7 @@ char *read_while(tokeniser_t *t, bool (*pred)(char)) {
     return s;
 }
 
-token_t next_token(tokeniser_t *t) {
+token_t next_token_(tokeniser_t *t) {
     if (t->last_token.tok != None) {
         token_t temp =  t->last_token;
         t->last_token.tok = None;
@@ -93,7 +93,7 @@ token_t next_token(tokeniser_t *t) {
         case '\n':
             t->pos++;
             line = t->line++;
-            col = t->col = 0;
+            col = t->col = 1;
             break;
         case '"':
         {
@@ -156,6 +156,12 @@ token_t next_token(tokeniser_t *t) {
     return (token_t) { .tok = None, .line = line, .col = col };
 }
 
+token_t next_token(tokeniser_t *tokeniser) {
+    token_t t = next_token_(tokeniser);
+    fprintf(stderr, "%s\n", token_to_string(&t));
+    return t;
+}
+
 void next_peek(tokeniser_t *t) {
     if (t->last_token.tok == None) {
         t->last_token = next_token(t);
@@ -189,7 +195,7 @@ tokeniser_t *new_tokeniser(FILE *f) {
     fread(buf, 1, len, f);
     buf[len] = '\0';
     tokeniser_t *t = malloc(sizeof(tokeniser_t));
-    *t = (tokeniser_t) { .buf = buf, .line = 1, .col = 0, .pos = 0, .last_token = { .tok = None } };
+    *t = (tokeniser_t) { .buf = buf, .line = 1, .col = 1, .pos = 0, .last_token = { .tok = None } };
     return t;
 }
 
@@ -199,6 +205,7 @@ void free_tokeniser(tokeniser_t *t) {
 }
 
 bool is_eof(tokeniser_t *t) {
+    skip_whitespace(t);
     return t->buf[t->pos] == '\0';
 }
 
@@ -212,6 +219,7 @@ char *token_to_string(token_t *t) {
     case Str:
     case Ident:
         fst = t->s;
+        break;
     case Int:
         fst = malloc(100);
         sprintf(fst, "%lld", t->i);
@@ -234,6 +242,8 @@ char *token_to_string(token_t *t) {
     case RBracket:
         fst = "]";
         break;
+    default:
+        fst = "unknown";
     }
 
     char *buf = malloc(100);
@@ -243,4 +253,24 @@ char *token_to_string(token_t *t) {
     if (t->tok == Int)
         free(fst);
     return res;
+}
+
+void skip_whitespace(tokeniser_t *t) {
+    for (;;) {
+        switch (t->buf[t->pos]) {
+        case ' ':
+        case '\t':
+        case '\r':
+            t->pos++;
+            t->col++;
+            break;
+        case '\n':
+            t->pos++;
+            t->line++;
+            t->col = 1;
+            break;
+        default:
+            return;
+        }
+    }
 }

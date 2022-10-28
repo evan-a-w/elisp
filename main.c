@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
             } else {
                 print_program(stdout, p);
             }
+            printf("\n");
             free_program(p);
             free_tokeniser(t);
         }
