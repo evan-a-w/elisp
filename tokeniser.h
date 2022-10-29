@@ -45,5 +45,6 @@ void free_tokeniser(tokeniser_t *t);
 bool is_eof(tokeniser_t *t);
 char *token_to_string(token_t *t);
 void skip_whitespace(tokeniser_t *t);
+char *allocate_string(char *);
 
 #endif

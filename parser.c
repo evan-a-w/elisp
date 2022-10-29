@@ -6,7 +6,6 @@
 
 #include "tokeniser.h"
 #include "parser.h"
-#include "lib.h"
 
 bool error_token(token_t *t) {
     return t->tok == Error || t->tok == None;

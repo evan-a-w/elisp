@@ -1,22 +1,23 @@
 CC = clang
 CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 
-all: main
-
-main: main.o parser.o tokeniser.o lib.o
+main: main.o parser.o tokeniser.o garb.o rb.o
 	$(CC) $(CFLAGS) -o main main.o parser.o tokeniser.o lib.o
 
-main.o: main.c parser.h tokeniser.h lib.h
+main.o: main.c parser.h tokeniser.h garb.h
 	$(CC) $(CFLAGS) -c main.c
 
-parser.o: parser.c parser.h tokeniser.h lib.h
+parser.o: parser.c parser.h tokeniser.h
 	$(CC) $(CFLAGS) -c parser.c
 
-tokeniser.o: tokeniser.c tokeniser.h lib.h
+tokeniser.o: tokeniser.c tokeniser.h
 	$(CC) $(CFLAGS) -c tokeniser.c
 
-lib.o: lib.c lib.h
-	$(CC) $(CFLAGS) -c lib.c
+rb_test: rb.o garb.o rb_test.o root_list.o long_table.o
+	$(CC) $(CFLAGS) -o rb_test rb.o garb.o rb_test.o root_list.o long_table.o
+
+rb_test.o: rb_test.c
+	$(CC) $(CFLAGS) -c rb_test.c
 
 rb.o: rb.c rb.h garb.h
 	$(CC) $(CFLAGS) -c rb.c
@@ -34,4 +35,4 @@ garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
 
 clean:
-	rm *.o main garb_test
+	rm -f *.o main garb_test rb_test

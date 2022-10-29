@@ -4,100 +4,154 @@
 #include "rb.h"
 #include "garb.h"
 
-rb_node_t *rotate_left(rb_node_t *h) {
-    h = copy_node(h, h->colour);
-    rb_node_t *x = copy_node(h->right, h->right->colour);
-    h->right = x->left;
-    x->left = h;
-    x->colour = h->colour;
-    h->colour = RED;
+void rb_trace(void *p) {
+    rb_node_t *root = p;
+    trace(root->left);
+    trace(root->right);
+    value_node_t *node = root->values;
+    while (node != NULL) {
+        trace(node->value);
+        node = node->next;
+    }
+}
+
+void rb_finalise(void *root) {
+    value_node_t *node = ((rb_node_t *)root)->values;
+    while (node != NULL) {
+        value_node_t *next = node->next;
+        free(node);
+    }
+}
+
+handle_t rotate_left(handle_t h) {
+    h = rb_copy(h);
+    handle_t x = rb_copy(RB(h)->right);
+    rb_node_t *a = RB(h);
+    rb_node_t *b = RB(x);
+    a->right = b->left;
+    b->left = h;
+    b->colour = a->colour;
+    a->colour = RED;
     return x;
 }
 
-rb_node_t *rotate_right(rb_node_t *h) {
-    h = copy_node(h, h->colour);
-    rb_node_t *x = copy_node(h->left, h->left->colour);
-    h->left = x->right;
-    x->right = h;
-    x->colour = h->colour;
-    h->colour = RED;
+handle_t rotate_right(handle_t h) {
+    h = rb_copy(h);
+    handle_t x = rb_copy(RB(h)->left);
+    rb_node_t *a = RB(h);
+    rb_node_t *b = RB(x);
+    a->left = b->right;
+    b->right = h;
+    b->colour = a->colour;
+    a->colour = RED;
     return x;
 }
 
-rb_node_t *copy_node(rb_node_t *node, colour_t c) {
-    rb_node_t *new_node = malloc(sizeof(rb_node_t));
-    *new_node = (rb_node_t) {
-        .key = node->key,
-        .values = node->values,
-        .colour = c,
-        .left = node->left,
-        .right = node->right,
+handle_t rb_copy(handle_t node) {
+    handle_t new_node = galloc(sizeof(rb_node_t), rb_trace, rb_finalise);
+    rb_node_t *n = RB(node);
+    *RB(new_node) = (rb_node_t) {
+        .key = n->key,
+        .values = n->values,
+        .colour = n->colour,
+        .left = n->left,
+        .right = n->right,
     };
     return new_node;
 }
 
-rb_node_t *flip_colours(rb_node_t *h) {
-    rb_node_t *r = copy_node(h, !h->colour);
-    r->left = copy_node(h->left, !h->left->colour);
-    r->right = copy_node(h->right, !h->right->colour);
-    r->left->left = h->left->left;
-    r->left->right = h->left->right;
-    r->right->left = h->right->left;
-    r->right->right = h->right->right;
-    return r;
+handle_t rb_copy_with(handle_t node, colour_t c) {
+    handle_t new_node = galloc(sizeof(rb_node_t), rb_trace, rb_finalise);
+    rb_node_t *n = RB(node);
+    *RB(new_node) = (rb_node_t) {
+        .key = n->key,
+        .values = n->values,
+        .colour = c,
+        .left = n->left,
+        .right = n->right,
+    };
+    return new_node;
 }
 
-void *rb_search(rb_node_t *root, long long key) {
-    rb_node_t *x = root;
-    while (x != NULL) {
+handle_t flip_colours(handle_t m) {
+    handle_t n = rb_copy(m);
+    rb_node_t *h = RB(m);
+    rb_node_t *r = RB(n);
+    r->colour = !r->colour;
+    handle_t t = rb_copy(r->left);
+    r = RB(n);
+    RB(n)->left = t;
+    t = rb_copy(RB(n)->right);
+    r = RB(n);
+    r->right = t;
+    RB(r->left)->colour = !(RB(r->left)->colour);
+    RB(r->right)->colour = !(RB(r->right)->colour);
+    RB(r->left)->left = RB(h->left)->left;
+    RB(r->left)->right = RB(h->left)->right;
+    RB(r->right)->left = RB(h->right)->left;
+    RB(r->right)->right = RB(h->right)->right;
+    return n;
+}
+
+handle_t rb_search(handle_t h, long long key) {
+    while (h != NULL_HANDLE && RB(h) != NULL) {
+        rb_node_t *x = RB(h);
         int cmp = key - x->key;
         if (cmp < 0) {
-            x = x->left;
+            h = x->left;
         } else if (cmp > 0) {
-            x = x->right;
+            h = x->right;
         } else {
             return x->values->value;
         }
     }
-    return NULL;
+    return NULL_HANDLE;
 }
 
-rb_node_t *new_node(long long key, void *value, colour_t colour) {
-    rb_node_t *node = malloc(sizeof(rb_node_t));
+handle_t new_node(long long key, handle_t value, colour_t colour) {
+    handle_t h = galloc(sizeof(rb_node_t), rb_trace, rb_finalise);
+    rb_node_t *node = RB(h);
     node->values = malloc(sizeof *node->values);
     node->values->next = NULL;
     node->values->value = value;
     node->key = key;
     node->colour = colour;
-    node->left = NULL;
-    node->right = NULL;
-    return node;
+    node->left = NULL_HANDLE;
+    node->right = NULL_HANDLE;
+    return h;
 }
 
-bool is_red(rb_node_t *node) {
-    if (node == NULL) {
+bool is_red(handle_t node) {
+    if (node == NULL_HANDLE) {
         return false;
     }
-    return node->colour == RED;
+    return RB(node)->colour == RED;
 }
 
-rb_node_t *rb_insert(rb_node_t *h, long long key, void *value) {
-    if (h == NULL) return new_node(key, value, RED);
+handle_t rb_insert(handle_t han, long long key, handle_t value) {
+    if (han == NULL_HANDLE) return new_node(key, value, RED);
+    rb_node_t *h = RB(han);
 
-    if (is_red(h->left) && is_red(h->right)) h = flip_colours(h);
+    if (is_red(h->left) && is_red(h->right)) {
+        han = flip_colours(han);
+        h = RB(han);
+    }
 
     int cmp = key - h->key;
     if (cmp == 0) {
         value_node_t *v = malloc(sizeof *v);
         v->value = value;
         v->next = h->values;
-        rb_node_t *new_node = copy_node(h, h->colour);
-        new_node->values = v;
+        handle_t new_node = rb_copy(han);
+        RB(new_node)->values = v;
     } else if (cmp < 0) h->left = rb_insert(h->left, key, value);
     else h->right = rb_insert(h->right, key, value);
 
-    if (is_red(h->right) && !is_red(h->left)) h = rotate_left(h);
-    if (is_red(h->left) && is_red(h->left->left)) h = rotate_right(h);
+    if (is_red(h->right) && !is_red(h->left)) {
+        han = rotate_left(han);
+        h = RB(han);
+    }
+    if (is_red(h->left) && is_red(RB(h->left)->left)) han = rotate_right(han);
 
-    return h;
+    return han;
 }

@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 #include "tokeniser.h"
-#include "lib.h"
 
 struct tokeniser {
     char *buf;
@@ -13,6 +12,12 @@ struct tokeniser {
     int pos;
     token_t last_token;
 };
+
+char *allocate_string(char *s) {
+    char *result = malloc(strlen(s) + 1);
+    strcpy(result, s);
+    return result;
+}
 
 void free_token(token_t t) {
     switch (t.tok) {
