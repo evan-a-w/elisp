@@ -27,7 +27,7 @@ void free_token(token_t t) {
 }
 
 bool is_ident_start(char c) {
-    char *others = "_-+*/%&|!^~?:'><=";
+    char *others = "_-+*/%&|!^~?:><=";
     for (unsigned i = 0; i < strlen(others); i++) {
         if (c == others[i]) {
             return true;
@@ -41,7 +41,7 @@ bool not_quote(char c) {
 }
 
 bool is_ident(char c) {
-    return is_ident_start(c) || (c >= '0' && c <= '9');
+    return is_ident_start(c) || (c >= '0' && c <= '9') || c == '\'';
 }
 
 bool is_digit(char c) {
@@ -95,6 +95,12 @@ token_t next_token(tokeniser_t *t) {
             line = t->line++;
             col = t->col = 1;
             break;
+        case '\'':
+        {
+            t->pos++;
+            t->col++;
+            return (token_t) { .tok = QuoteMark, .line = line, .col = col };
+        }
         case '"':
         {
             t->pos++;
@@ -196,6 +202,7 @@ tokeniser_t *new_tokeniser(FILE *f) {
 void free_tokeniser(tokeniser_t *t) {
     free(t->buf);
     free_last_token(t);
+    free(t);
 }
 
 bool is_eof(tokeniser_t *t) {
@@ -236,6 +243,9 @@ char *token_to_string(token_t *t) {
         break;
     case RBracket:
         fst = "]";
+        break;
+    case QuoteMark:
+        fst = "'";
         break;
     default:
         fst = "unknown";

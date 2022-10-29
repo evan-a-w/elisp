@@ -19,6 +19,7 @@ typedef enum tok {
     Ident,
     Int,
     Str,
+    QuoteMark,
     None,
 } tok_t;
 

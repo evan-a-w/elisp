@@ -18,5 +18,11 @@ tokeniser.o: tokeniser.c tokeniser.h lib.h
 lib.o: lib.c lib.h
 	$(CC) $(CFLAGS) -c lib.c
 
+rb.o: rb.c rb.h garb.h
+	$(CC) $(CFLAGS) -c rb.c
+
+garb.o: garb.c garb.h
+	$(CC) $(CFLAGS) -c garb.c
+
 clean:
 	rm *.o main

@@ -6,10 +6,18 @@
 typedef enum ast_type {
     AstError,
     AtomInt,
-    AtomIdent,
     AtomString,
+    AtomSymbol,
     SExpr,
+    SpecialForm,
 } ast_type_t;
+
+typedef enum special_form {
+    If,
+    Let,
+    Quote,
+    Var,
+} special_form_t;
 
 typedef struct sexpr {
     struct ast *val;
@@ -22,6 +30,7 @@ typedef struct ast {
         char *s;
         long long i;
         sexpr_t *l;
+        special_form_t special;
     };
 } ast_t;
 
