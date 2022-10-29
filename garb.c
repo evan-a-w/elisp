@@ -4,12 +4,6 @@
 
 #include "garb.h"
 
-typedef enum {
-    YOUNG,
-    OLD,
-    KILL,
-} age_t;
-
 typedef struct header {
     age_t age;
     bool traced;
@@ -43,6 +37,17 @@ header_t *get_header(handle_t t) {
 
 void condense_header_table() {
     // TODO
+}
+
+void trace_only(handle_t h, age_t age) {
+    if (h) {
+        header_t *header = get_header(h);
+        if (header->traced) return;
+        if (header->age == age) {
+            header->traced = true;
+            if (header->trace) header->trace(header->data);
+        }
+    }
 }
 
 void free_stack_push(handle_t start, handle_t end) {
@@ -106,6 +111,7 @@ static struct gc_state {
 };
 
 bool gc_init() {
+    init_roots();
     if (gc_state.young_heap != NULL) {
         return true;
     }
@@ -166,6 +172,7 @@ static handle_t header_init(
 
 // things should already be traced
 bool gc_collect_major(void) {
+    for_each_root(trace_old);
     handle_t new_head, next;
     new_head = next = NULL_HANDLE;
     size_t survived = 0;
@@ -204,7 +211,7 @@ bool gc_collect_major(void) {
 }
 
 bool gc_collect_minor(void) {
-    for_each_root(trace);
+    for_each_root(trace_young);
     handle_t traced_head = NULL_HANDLE;
     size_t survived = 0;
     handle_t next = NULL_HANDLE;
@@ -233,7 +240,6 @@ bool gc_collect_minor(void) {
         if (!gc_collect_major()) return false;
     }
 
-    handle_t old_head = gc_state.old_head;
     char *chunk = allocate_old(survived);
     next = NULL_HANDLE;
     for (handle_t curr_handle = traced_head;
@@ -251,12 +257,6 @@ bool gc_collect_minor(void) {
             gc_state.old_head = curr_handle;
         }
     }
-    
-
-    for (handle_t curr_handle = old_head;
-         curr_handle != NULL_HANDLE;
-         curr_handle = get_header(curr_handle)->next
-    ) get_header(curr_handle)->traced = false;
 
     gc_state.young_head = NULL_HANDLE;
     gc_state.young_heap_next = gc_state.young_heap;
@@ -305,6 +305,15 @@ void gc_destroy() {
     free(free_stack);
     free(gc_state.old_heap);
     free(gc_state.young_heap);
+    destroy_roots();
+}
+
+void trace_old(handle_t h) {
+    trace_only(h, OLD);
+}
+
+void trace_young(handle_t h) {
+    trace_only(h, YOUNG);
 }
 
 void trace(handle_t h) {

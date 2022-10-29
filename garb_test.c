@@ -2,7 +2,6 @@
 #include <assert.h>
 
 #include "garb.h"
-#include "root_stack.h"
 
 typedef struct node {
     long long val;
@@ -16,8 +15,8 @@ void trace_node(void *data) {
 
 void insert_front(handle_t *list, long long val) {
     handle_t h = galloc(sizeof(node_t), trace_node, NULL);
-    if (*list != 0) pop_root();
-    push_root(h);
+    unroot(*list);
+    root(h);
     D(h, node_t *)->val = val;
     D(h, node_t *)->next = *list;
     *list = h;
@@ -25,11 +24,15 @@ void insert_front(handle_t *list, long long val) {
 
 handle_t new_node(long long val, handle_t next) {
     handle_t h = galloc(sizeof(node_t), trace_node, NULL);
-    push_root(h);
+    root(h);
     node_t *node = d(h);
     node->val = val;
     node->next = next;
     return h;
+}
+
+void print_root(handle_t h) {
+    printf("%lu ", h);
 }
 
 int main(void) {
@@ -37,7 +40,7 @@ int main(void) {
 
     for (int i = 1; i <= 40; i++) {
         handle_t h = galloc(sizeof(int), NULL, NULL);
-        push_root(h);
+        root(h);
         *D(h, int *) = i;
     }
     
@@ -63,7 +66,7 @@ int main(void) {
         head = D(head, node_t *)->next;
     }
 
-    pop_root();
+    unroot(head);
 
     gc_collect_minor();
 

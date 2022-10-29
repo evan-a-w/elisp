@@ -21,11 +21,14 @@ lib.o: lib.c lib.h
 rb.o: rb.c rb.h garb.h
 	$(CC) $(CFLAGS) -c rb.c
 
-garb_test: garb_test.c garb.o root_stack.o
-	$(CC) $(CFLAGS) -o garb_test garb_test.c garb.o root_stack.o
+garb_test: garb_test.c garb.o root_list.o long_table.o
+	$(CC) $(CFLAGS) -o garb_test garb_test.c garb.o root_list.o long_table.o
 
-root_stack.o: root_stack.c root_stack.h garb.h
-	$(CC) $(CFLAGS) -c root_stack.c
+root_list.o: root_list.c garb.h long_table.h
+	$(CC) $(CFLAGS) -c root_list.c
+
+long_table.o: long_table.c long_table.h
+	$(CC) $(CFLAGS) -c long_table.c
 
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
