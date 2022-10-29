@@ -4,7 +4,14 @@
 
 #include "garb.h"
 
+typedef enum {
+    YOUNG,
+    OLD,
+    KILL,
+} age_t;
+
 typedef struct header {
+    age_t age;
     bool traced;
     size_t size;
     void *data;
@@ -21,13 +28,11 @@ typedef struct free_range {
 
 #define HEADER_SIZE (sizeof(struct header))
 
-static header_t *header_table;
-static size_t header_table_capacity;
-static free_range_t *free_stack;
-static size_t free_stack_size;
-static size_t free_stack_capacity;
-
-static void trace_roots(void);
+static header_t *header_table = NULL;
+static size_t header_table_capacity = 0;
+static free_range_t *free_stack = NULL;
+static size_t free_stack_size = 0;
+static size_t free_stack_capacity = 0;
 
 header_t *get_header(handle_t t) {
     if (t == NULL_HANDLE) {
@@ -52,6 +57,8 @@ void free_stack_push(handle_t start, handle_t end) {
 }
 
 void free_handle(handle_t h) {
+    header_table[h - 1].data = NULL;
+    header_table[h - 1].next = NULL_HANDLE;
     free_stack_push(h, h);
 }
 
@@ -60,16 +67,18 @@ handle_t get_handle() {
         size_t old_cap = header_table_capacity;
         header_table_capacity = header_table_capacity * 2 + 1;
         header_table = realloc(header_table, HEADER_SIZE * header_table_capacity);
-        free_stack_push(old_cap, header_table_capacity - 1);
+        for (handle_t h = old_cap; h < header_table_capacity; h++)
+            header_table[h].data = NULL;
+        free_stack_push(old_cap + 1, header_table_capacity);
     } else if (free_stack_size * 2 > header_table_capacity) {
         condense_header_table();
     }
-    free_range_t range = free_stack[free_stack_size];
+    free_range_t range = free_stack[free_stack_size - 1];
     handle_t res = range.start;
     if (range.start == range.end) {
         free_stack_size--;
     } else {
-        range.start++;
+        free_stack[free_stack_size - 1].start++;
     }
     return res + 1;
 }
@@ -106,6 +115,7 @@ bool gc_init() {
         return false;
     }
     gc_state.young_heap_next = gc_state.young_heap;
+    gc_state.young_head = NULL_HANDLE;
 
     gc_state.old_heap = malloc(OLD_HEAP_DEFAULT);
     if (gc_state.old_heap == NULL) {
@@ -114,14 +124,15 @@ bool gc_init() {
         return false;
     }
     gc_state.old_heap_size = 0;
+    gc_state.old_head = NULL_HANDLE;
     gc_state.old_heap_capacity = OLD_HEAP_DEFAULT;
-    
+
     return true;
 }
 
 char *allocate_old(size_t size) {
     if (gc_state.old_heap_size + size > gc_state.old_heap_capacity) {
-        gc_state.old_heap_capacity = gc_state.old_heap_capacity * 3 / 2 + size;
+        gc_state.old_heap_capacity = gc_state.old_heap_capacity + (gc_state.old_heap_capacity / 2) + size;
         gc_state.old_heap = realloc(gc_state.old_heap, gc_state.old_heap_capacity);
         assert(gc_state.old_heap);
     }
@@ -138,9 +149,12 @@ static handle_t header_init(
     void *data
 ) {
     handle_t handle = get_handle();
+    assert(handle);
     header_t *header = get_header(handle);
+    assert(header);
     *header = (header_t) {
         .traced = false,
+        .age = YOUNG,
         .size = size,
         .data = data,
         .next = next,
@@ -151,11 +165,13 @@ static handle_t header_init(
 }
 
 // things should already be traced
-static bool gc_collect_major(void) {
-    handle_t new_head = NULL_HANDLE;
+bool gc_collect_major(void) {
+    handle_t new_head, next;
+    new_head = next = NULL_HANDLE;
     size_t survived = 0;
-    for (handle_t h = gc_state.old_head; h != NULL_HANDLE; h = get_header(h)->next) {
+    for (handle_t h = gc_state.old_head; h != NULL_HANDLE; h = next) {
         header_t *header = get_header(h);
+        next = header->next;
         if (header->traced) {
             header->traced = false;
             header->next = new_head;
@@ -175,8 +191,11 @@ static bool gc_collect_major(void) {
     if (new_old == NULL) {
         return false;
     }
-    for (handle_t h = gc_state.old_head; h != NULL_HANDLE; h = get_header(h)->next) {
+    
+    next = NULL_HANDLE;
+    for (handle_t h = gc_state.old_head; h != NULL_HANDLE; h = next) {
         header_t *header = get_header(h);
+        next = header->next;
         memcpy(new_old, header->data, header->size);
         header->data = new_old;
         new_old += header->size;
@@ -184,18 +203,19 @@ static bool gc_collect_major(void) {
     return true;
 }
 
-static bool gc_collect_minor(void) {
-    trace_roots();
+bool gc_collect_minor(void) {
+    for_each_root(trace);
     handle_t traced_head = NULL_HANDLE;
-    handle_t curr_handle = gc_state.young_head;
     size_t survived = 0;
+    handle_t next = NULL_HANDLE;
     for (handle_t curr_handle = gc_state.young_head;
          curr_handle != NULL_HANDLE;
-         curr_handle = get_header(curr_handle)->next
+         curr_handle = next
     ) {
         header_t *header = get_header(curr_handle);
+        next = header->next;
         if (header->traced) {
-            header->traced = false;
+            header->age = OLD;
             header->next = traced_head;
             traced_head = curr_handle;
             survived += header->size;
@@ -207,12 +227,22 @@ static bool gc_collect_minor(void) {
         }
     }
 
+    gc_state.bytes_since_major += survived;
+    if (gc_state.bytes_since_major > BYTES_TILL_MAJOR_GC) {
+        gc_state.bytes_since_major = 0;
+        if (!gc_collect_major()) return false;
+    }
+
+    handle_t old_head = gc_state.old_head;
     char *chunk = allocate_old(survived);
+    next = NULL_HANDLE;
     for (handle_t curr_handle = traced_head;
          curr_handle != NULL_HANDLE;
-         curr_handle = get_header(curr_handle)->next
+         curr_handle = next
     ) {
         header_t *header = get_header(curr_handle);
+        next = header->next;
+        header->traced = false;
         memcpy(chunk, header->data, header->size);
         header->data = chunk;
         chunk += header->size;
@@ -222,19 +252,11 @@ static bool gc_collect_minor(void) {
         }
     }
     
-    gc_state.bytes_since_major += survived;
-    if (gc_state.bytes_since_major > BYTES_TILL_MAJOR_GC) {
-        gc_state.bytes_since_major = 0;
-        return gc_collect_major();
-    } else {
-        for (handle_t curr_handle = gc_state.old_head;
-             curr_handle != NULL_HANDLE;
-             curr_handle = get_header(curr_handle)->next
-        ) {
-            header_t *header = get_header(curr_handle);
-            header->traced = false;
-        }
-    }
+
+    for (handle_t curr_handle = old_head;
+         curr_handle != NULL_HANDLE;
+         curr_handle = get_header(curr_handle)->next
+    ) get_header(curr_handle)->traced = false;
 
     gc_state.young_head = NULL_HANDLE;
     gc_state.young_heap_next = gc_state.young_heap;
@@ -257,10 +279,13 @@ handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
     handle_t handle = header_init(size, gc_state.young_head, trace, finalize, data);
     if (handle == NULL_HANDLE) return handle;
 
+    header_t *header = get_header(handle);
     if (size > YOUNG_HEAP_SIZE) {
-        get_header(handle)->next = gc_state.old_head;
+        header->next = gc_state.old_head;
+        header->age = OLD;
         gc_state.old_head = handle;
     } else {
+        header->age = YOUNG;
         gc_state.young_head = handle;
         gc_state.young_heap_next += size + HEADER_SIZE;
     }
@@ -269,13 +294,28 @@ handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
 }
 
 void gc_destroy() {
-    // leak
+    for (handle_t h = 0; h < header_table_capacity; h++) {
+        header_t *header = &header_table[h];
+        if (header->data == NULL) continue;
+        if (header->finalize) {
+            header->finalize(header->data);
+        }
+    }
+    free(header_table);
+    free(free_stack);
+    free(gc_state.old_heap);
+    free(gc_state.young_heap);
 }
 
-static void trace_roots(void) {
-    for (unsigned long i = 0; i < roots_size; i++) {
-        header_t *header = get_header(roots[i]);
+void trace(handle_t h) {
+    if (h) {
+        header_t *header = get_header(h);
+        if (header->traced) return;
         header->traced = true;
-        header->trace(header->data);
+        if (header->trace) header->trace(header->data);
     }
+}
+
+void *d(handle_t handle) {
+    return get_header(handle)->data;
 }

@@ -21,8 +21,14 @@ lib.o: lib.c lib.h
 rb.o: rb.c rb.h garb.h
 	$(CC) $(CFLAGS) -c rb.c
 
+garb_test: garb_test.c garb.o root_stack.o
+	$(CC) $(CFLAGS) -o garb_test garb_test.c garb.o root_stack.o
+
+root_stack.o: root_stack.c root_stack.h garb.h
+	$(CC) $(CFLAGS) -c root_stack.c
+
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
 
 clean:
-	rm *.o main
+	rm *.o main garb_test
