@@ -1,8 +1,8 @@
 #ifndef GARB_H
 #define GARB_H
 
-#define YOUNG_HEAP_SIZE 4096
-#define OLD_HEAP_DEFAULT 8192
+#define YOUNG_HEAP_SIZE 16384
+#define OLD_HEAP_DEFAULT 16384
 #define BYTES_TILL_MAJOR_GC 8192
 #define NULL_HANDLE 0
 
@@ -27,6 +27,7 @@ void init_roots(void);
 void destroy_roots(void);
 void root(handle_t handle);
 void unroot(handle_t handle);
+bool rooted(handle_t handle);
 
 bool gc_init();
 void gc_destroy();
@@ -35,6 +36,8 @@ void trace(handle_t);
 void trace_young(handle_t);
 void trace_old(handle_t);
 header_t *get_header(handle_t handle);
+handle_t galloc_rooted(size_t size, void (*trace)(void *), void (*finalize)(void *));
+handle_t galloc_unrooted(size_t size, void (*trace)(void *), void (*finalize)(void *));
 handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *));
 bool gc_collect_minor(void);
 bool gc_collect_major(void);

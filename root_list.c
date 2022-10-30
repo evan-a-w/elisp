@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "garb.h"
 #include "long_table.h"
@@ -19,6 +20,10 @@ void for_each_root(void (*f)(handle_t)) {
     }
 }
 
+bool rooted(handle_t h) {
+    return long_table_find(roots, h) != NULL;
+}
+
 void init_roots(void) {
     roots = long_table_new();
     root_list = NULL;
@@ -34,6 +39,8 @@ void destroy_roots(void) {
 }
 
 void root(handle_t handle) {
+    if (handle == 0)
+        return;
     node_t *n = malloc(sizeof *n);
     n->val = handle;
     n->next = root_list;

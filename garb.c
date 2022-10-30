@@ -4,6 +4,22 @@
 
 #include "garb.h"
 
+#define CHECKY
+
+#ifdef CHECKY
+typedef struct vals {
+    void *data;
+    size_t size;
+    handle_t h;
+    struct vals *next;
+} vals;
+
+void push_val(handle_t h);
+void checky(void);
+
+static vals *all_vals = NULL;
+#endif
+
 typedef struct header {
     age_t age;
     bool traced;
@@ -99,6 +115,9 @@ static struct gc_state {
     size_t old_heap_size;
     size_t old_heap_capacity;
     size_t bytes_since_major;
+
+    size_t total_allocated;
+    size_t num_allocations;
 } gc_state = {
     .young_heap = NULL,
     .young_heap_next = NULL,
@@ -108,9 +127,12 @@ static struct gc_state {
     .old_heap_size = 0,
     .old_heap_capacity = 0,
     .bytes_since_major = 0,
+    .total_allocated = 0,
+    .num_allocations = 0,
 };
 
 bool gc_init() {
+    srand(0);
     init_roots();
     if (gc_state.young_heap != NULL) {
         return true;
@@ -172,7 +194,6 @@ static handle_t header_init(
 
 // things should already be traced
 bool gc_collect_major(void) {
-    for_each_root(trace_old);
     handle_t new_head, next;
     new_head = next = NULL_HANDLE;
     size_t survived = 0;
@@ -211,7 +232,10 @@ bool gc_collect_major(void) {
 }
 
 bool gc_collect_minor(void) {
-    for_each_root(trace_young);
+    for_each_root(trace);
+#ifdef CHECKY
+    for_each_root(push_val);
+#endif
     handle_t traced_head = NULL_HANDLE;
     size_t survived = 0;
     handle_t next = NULL_HANDLE;
@@ -237,7 +261,16 @@ bool gc_collect_minor(void) {
     gc_state.bytes_since_major += survived;
     if (gc_state.bytes_since_major > BYTES_TILL_MAJOR_GC) {
         gc_state.bytes_since_major = 0;
-        if (!gc_collect_major()) return false;
+        assert(gc_collect_major());
+    } else {
+        for (handle_t curr_handle = gc_state.old_head;
+             curr_handle != NULL_HANDLE;
+             curr_handle = next
+        ) {
+            header_t *header = get_header(curr_handle);
+            next = header->next;
+            header->traced = false;
+        }
     }
 
     char *chunk = allocate_old(survived);
@@ -260,10 +293,14 @@ bool gc_collect_minor(void) {
 
     gc_state.young_head = NULL_HANDLE;
     gc_state.young_heap_next = gc_state.young_heap;
+
+#ifdef CHECKY
+    checky();
+#endif
     return true;
 }
 
-handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+handle_t galloc_unrooted(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
     char *data;
     // If size is too big, we put it on the old heap isntantly
     if (size > YOUNG_HEAP_SIZE) {
@@ -290,10 +327,27 @@ handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
         gc_state.young_heap_next += size + HEADER_SIZE;
     }
 
+    gc_state.num_allocations++;
+    gc_state.total_allocated += size;
+
     return handle;
 }
 
+handle_t galloc_rooted(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+    handle_t h = galloc_unrooted(size, trace, finalize);
+    root(h);
+    return h;
+}
+
+handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+    return galloc_unrooted(size, trace, finalize);
+}
+
 void gc_destroy() {
+    printf(
+        "Total allocations: %zu, total bytes allocated: %zu\n",
+        gc_state.num_allocations, gc_state.total_allocated
+    );
     for (handle_t h = 0; h < header_table_capacity; h++) {
         header_t *header = &header_table[h];
         if (header->data == NULL) continue;
@@ -328,3 +382,35 @@ void trace(handle_t h) {
 void *d(handle_t handle) {
     return get_header(handle)->data;
 }
+
+
+#ifdef CHECKY
+void push_val(handle_t h) {
+    header_t *head = get_header(h);
+    if (!h) return;
+    vals *v = malloc(sizeof(vals));
+    v->data = malloc(head->size);
+    v->size = head->size;
+    memcpy(v->data, D(h, void *), head->size);
+    v->h = h;
+    v->next = all_vals;
+    all_vals = v;
+}
+
+void checky() {
+    vals *v = all_vals;
+    while (v) {
+        header_t *head = get_header(v->h);
+        if (memcmp(v->data, D(v->h, void *), head->size) != 0) {
+            printf("ERROR: at handle %lu\n", v->h);
+            exit(1);
+        }
+        free(v->data);
+        vals *next = v->next;
+        free(v);
+        v = next;
+    }
+    all_vals = NULL;
+}
+
+#endif

@@ -14,7 +14,7 @@ void trace_node(void *data) {
 }
 
 void insert_front(handle_t *list, long long val) {
-    handle_t h = galloc(sizeof(node_t), trace_node, NULL);
+    handle_t h = galloc_unrooted(sizeof(node_t), trace_node, NULL);
     unroot(*list);
     root(h);
     D(h, node_t *)->val = val;
@@ -23,7 +23,7 @@ void insert_front(handle_t *list, long long val) {
 }
 
 handle_t new_node(long long val, handle_t next) {
-    handle_t h = galloc(sizeof(node_t), trace_node, NULL);
+    handle_t h = galloc_unrooted(sizeof(node_t), trace_node, NULL);
     root(h);
     node_t *node = d(h);
     node->val = val;
@@ -38,8 +38,10 @@ void print_root(handle_t h) {
 int main(void) {
     gc_init();
 
+    handle_t ep;
     for (int i = 1; i <= 40; i++) {
-        handle_t h = galloc(sizeof(int), NULL, NULL);
+        handle_t h = galloc_unrooted(sizeof(int), NULL, NULL);
+        if (i == 29) ep = h;
         root(h);
         *D(h, int *) = i;
     }
@@ -67,12 +69,15 @@ int main(void) {
     }
 
     unroot(head);
+    root(ep);
 
     gc_collect_minor();
 
 
     for (int i = 0; i < 100000; i++) {
-        assert(galloc(10, NULL, NULL) != NULL_HANDLE);
+        if (i % 100 == 0) root(head);
+        assert(galloc_unrooted(10, NULL, NULL) != NULL_HANDLE);
+        assert(*D(ep, int *) == 29);
     }
 
     gc_destroy();

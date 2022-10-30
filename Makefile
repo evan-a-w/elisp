@@ -13,14 +13,14 @@ parser.o: parser.c parser.h tokeniser.h
 tokeniser.o: tokeniser.c tokeniser.h
 	$(CC) $(CFLAGS) -c tokeniser.c
 
-rb_test: rb.o garb.o rb_test.o root_list.o long_table.o
-	$(CC) $(CFLAGS) -o rb_test rb.o garb.o rb_test.o root_list.o long_table.o
+treap_test: treap.o garb.o treap_test.o root_list.o long_table.o
+	$(CC) $(CFLAGS) -o treap_test treap.o garb.o treap_test.o root_list.o long_table.o
 
-rb_test.o: rb_test.c
-	$(CC) $(CFLAGS) -c rb_test.c
+treap_test.o: treap_test.c
+	$(CC) $(CFLAGS) -c treap_test.c
 
-rb.o: rb.c rb.h garb.h
-	$(CC) $(CFLAGS) -c rb.c
+treap.o: treap.c treap.h garb.h
+	$(CC) $(CFLAGS) -c treap.c
 
 garb_test: garb_test.c garb.o root_list.o long_table.o
 	$(CC) $(CFLAGS) -o garb_test garb_test.c garb.o root_list.o long_table.o
@@ -34,5 +34,8 @@ long_table.o: long_table.c long_table.h
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
 
+list.o: list.c list.h garb.h
+	$(CC) $(CFLAGS) -c list.c
+
 clean:
-	rm -f *.o main garb_test rb_test
+	rm -f *.o main treap_test garb_test
