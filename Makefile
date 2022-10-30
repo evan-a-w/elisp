@@ -1,13 +1,16 @@
 CC = clang
 CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 
-all: garb_test treap_test
+all: garb_test.exe treap_test.exe parse_test.exe
 
-main: main.o parser.o tokeniser.o garb.o
-	$(CC) $(CFLAGS) -o main main.o parser.o tokeniser.o lib.o
+parse_test.exe: parse_test.o ast.a
+	$(CC) $(CFLAGS) -o parse_test.exe parse_test.o ast.a
 
-main.o: main.c parser.h tokeniser.h garb.h
-	$(CC) $(CFLAGS) -c main.c
+parse_test.o: parse_test.c parser.h tokeniser.h garb.h
+	$(CC) $(CFLAGS) -c parse_test.c
+
+ast.a: parser.o tokeniser.o parser.h tokeniser.h
+	ar rcs ast.a parser.o tokeniser.o
 
 parser.o: parser.c parser.h tokeniser.h
 	$(CC) $(CFLAGS) -c parser.c
@@ -15,8 +18,8 @@ parser.o: parser.c parser.h tokeniser.h
 tokeniser.o: tokeniser.c tokeniser.h
 	$(CC) $(CFLAGS) -c tokeniser.c
 
-treap_test: treap.o treap_test.o gclib.a
-	$(CC) $(CFLAGS) -o treap_test treap.o gclib.a treap_test.o
+treap_test.exe: treap.o treap_test.o gclib.a
+	$(CC) $(CFLAGS) -o treap_test.exe treap.o gclib.a treap_test.o
 
 treap_test.o: treap_test.c garb.h treap.h roots.h
 	$(CC) $(CFLAGS) -c treap_test.c
@@ -24,8 +27,8 @@ treap_test.o: treap_test.c garb.h treap.h roots.h
 treap.o: treap.c treap.h garb.h
 	$(CC) $(CFLAGS) -c treap.c
 
-garb_test: garb_test.c gclib.a
-	$(CC) $(CFLAGS) -o garb_test garb_test.c gclib.a
+garb_test.exe: garb_test.c gclib.a
+	$(CC) $(CFLAGS) -o garb_test.exe garb_test.c gclib.a
 
 gclib.a: garb.o long_table.o roots.o roots.h garb.h
 	ar rcs gclib.a garb.o roots.o long_table.o
@@ -40,4 +43,4 @@ garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
 
 clean:
-	rm -f *.o main treap_test garb_test *.a
+	rm -f *.o *.a *.exe
