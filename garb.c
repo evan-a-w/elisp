@@ -300,7 +300,7 @@ bool gc_collect_minor(void) {
     return true;
 }
 
-handle_t galloc_unrooted(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
     char *data;
     // If size is too big, we put it on the old heap isntantly
     if (size > YOUNG_HEAP_SIZE) {
@@ -331,16 +331,6 @@ handle_t galloc_unrooted(size_t size, void (*trace)(void *), void (*finalize)(vo
     gc_state.total_allocated += size;
 
     return handle;
-}
-
-handle_t galloc_rooted(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
-    handle_t h = galloc_unrooted(size, trace, finalize);
-    root(h);
-    return h;
-}
-
-handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
-    return galloc_unrooted(size, trace, finalize);
 }
 
 void gc_destroy() {

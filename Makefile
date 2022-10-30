@@ -1,7 +1,9 @@
 CC = clang
 CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 
-main: main.o parser.o tokeniser.o garb.o rb.o
+all: garb_test treap_test
+
+main: main.o parser.o tokeniser.o garb.o
 	$(CC) $(CFLAGS) -o main main.o parser.o tokeniser.o lib.o
 
 main.o: main.c parser.h tokeniser.h garb.h
@@ -13,20 +15,23 @@ parser.o: parser.c parser.h tokeniser.h
 tokeniser.o: tokeniser.c tokeniser.h
 	$(CC) $(CFLAGS) -c tokeniser.c
 
-treap_test: treap.o garb.o treap_test.o root_list.o long_table.o
-	$(CC) $(CFLAGS) -o treap_test treap.o garb.o treap_test.o root_list.o long_table.o
+treap_test: treap.o treap_test.o gclib.a
+	$(CC) $(CFLAGS) -o treap_test treap.o gclib.a treap_test.o
 
-treap_test.o: treap_test.c
+treap_test.o: treap_test.c garb.h treap.h roots.h
 	$(CC) $(CFLAGS) -c treap_test.c
 
 treap.o: treap.c treap.h garb.h
 	$(CC) $(CFLAGS) -c treap.c
 
-garb_test: garb_test.c garb.o root_list.o long_table.o
-	$(CC) $(CFLAGS) -o garb_test garb_test.c garb.o root_list.o long_table.o
+garb_test: garb_test.c gclib.a
+	$(CC) $(CFLAGS) -o garb_test garb_test.c gclib.a
 
-root_list.o: root_list.c garb.h long_table.h
-	$(CC) $(CFLAGS) -c root_list.c
+gclib.a: garb.o long_table.o roots.o roots.h garb.h
+	ar rcs gclib.a garb.o roots.o long_table.o
+
+roots.o: roots.c garb.h long_table.h roots.h
+	$(CC) $(CFLAGS) -c roots.c
 
 long_table.o: long_table.c long_table.h
 	$(CC) $(CFLAGS) -c long_table.c
@@ -34,8 +39,5 @@ long_table.o: long_table.c long_table.h
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
 
-list.o: list.c list.h garb.h
-	$(CC) $(CFLAGS) -c list.c
-
 clean:
-	rm -f *.o main treap_test garb_test
+	rm -f *.o main treap_test garb_test *.a

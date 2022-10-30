@@ -25,9 +25,6 @@ typedef struct header header_t;
 void for_each_root(void (*f)(handle_t));
 void init_roots(void);
 void destroy_roots(void);
-void root(handle_t handle);
-void unroot(handle_t handle);
-bool rooted(handle_t handle);
 
 bool gc_init();
 void gc_destroy();
@@ -36,8 +33,6 @@ void trace(handle_t);
 void trace_young(handle_t);
 void trace_old(handle_t);
 header_t *get_header(handle_t handle);
-handle_t galloc_rooted(size_t size, void (*trace)(void *), void (*finalize)(void *));
-handle_t galloc_unrooted(size_t size, void (*trace)(void *), void (*finalize)(void *));
 handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *));
 bool gc_collect_minor(void);
 bool gc_collect_major(void);
