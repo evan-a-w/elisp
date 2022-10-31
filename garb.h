@@ -30,6 +30,7 @@ bool gc_init();
 void gc_destroy();
 void *d(handle_t handle);
 void trace(handle_t);
+void finalize(handle_t);
 void trace_young(handle_t);
 void trace_old(handle_t);
 header_t *get_header(handle_t handle);

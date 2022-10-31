@@ -24,6 +24,12 @@ treap_test.exe: treap.o treap_test.o gclib.a
 treap_test.o: treap_test.c garb.h treap.h roots.h
 	$(CC) $(CFLAGS) -c treap_test.c
 
+map.o: map.c map.h garb.h roots.h list.h const_string.h api.h
+	$(CC) $(CFLAGS) -c map.c
+
+list.o: list.h garb.h api.h roots.h
+	$(CC) $(CFLAGS) -c list.c
+
 treap.o: treap.c treap.h garb.h
 	$(CC) $(CFLAGS) -c treap.c
 
@@ -41,6 +47,9 @@ long_table.o: long_table.c long_table.h
 
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
+
+const_string.o: const_string.c const_string.h
+	$(CC) $(CFLAGS) -c const_string.c
 
 clean:
 	rm -f *.o *.a *.exe

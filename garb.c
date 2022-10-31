@@ -360,6 +360,13 @@ void trace_young(handle_t h) {
     trace_only(h, YOUNG);
 }
 
+void finalize(handle_t h) {
+    if (h) {
+        header_t *header = get_header(h);
+        if (header->finalize) header->finalize(header->data);
+    }
+}
+
 void trace(handle_t h) {
     if (h) {
         header_t *header = get_header(h);
