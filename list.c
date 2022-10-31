@@ -1,6 +1,7 @@
 #include "garb.h"
 #include "list.h"
 #include "roots.h"
+#include "base_types.h"
 
 void list_trace(void *p) {
     list_node_t *n = p;
@@ -13,14 +14,14 @@ void list_trace(void *p) {
 handle_t list_copy_shallow(handle_t h) {
     if (h == NULL_HANDLE) return NULL_HANDLE;
     push_root(h);
-    handle_t h2 = galloc(sizeof(list_node_t), list_trace, list_finalize);
+    handle_t h2 = galloct(sizeof(list_node_t), LIST, list_trace, list_finalize);
     *L(h2) = *L(h);
     pop_root();
     return h2;
 }
 
 handle_t list_new(handle_t val) {
-    handle_t h = galloc(sizeof(list_node_t), list_trace, list_finalize);
+    handle_t h = galloct(sizeof(list_node_t), LIST, list_trace, list_finalize);
     list_node_t *node = L(h);
     node->val = val;
     node->next = NULL_HANDLE;
@@ -80,4 +81,21 @@ bool list_search(handle_t l, cmp_mod_t *cmp, handle_t *save_to) {
         l = list_tail(l);
     }
     return false;
+}
+
+handle_t list_erase_if(handle_t l, cmp_mod_t *cmp, bool (*erase)(handle_t)) {
+    if (l == NULL_HANDLE) return NULL_HANDLE;
+    handle_t nl = pro(list_copy_shallow(l));
+    list_node_t *node = L(nl);
+    if (cmp_mod_apply(cmp, node->val) == 0) {
+        pop_root();
+        if (erase(node->val)) {
+            return node->next;
+        } else {
+            return l;
+        }
+    }
+    L(nl)->next = list_erase_if(node->next, cmp, erase);
+    pop_root();
+    return nl;
 }

@@ -35,7 +35,11 @@ void trace_young(handle_t);
 void trace_old(handle_t);
 header_t *get_header(handle_t handle);
 handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *));
+handle_t galloct(size_t size, int tag, void (*trace)(void *), void (*finalize)(void *));
 bool gc_collect_minor(void);
 bool gc_collect_major(void);
+void set_tag(handle_t handle, int tag);
+int tag(handle_t h);
+void unsafe_set_data(handle_t h, void *val);
 
 #endif

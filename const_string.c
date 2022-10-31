@@ -2,12 +2,13 @@
 
 #include "garb.h"
 #include "const_string.h"
+#include "base_types.h"
 
 typedef unsigned long ul;
 
 handle_t cs_new(const char *str) {
     size_t len = strlen(str);
-    handle_t h = galloc(sizeof(const_string_t) + len + 1, NULL, NULL);
+    handle_t h = galloct(sizeof(const_string_t) + len + 1, STR, NULL, NULL);
     const_string_t *cs = CS(h);
     cs->len = len;
     memcpy(cs->str, str, len + 1);
@@ -27,5 +28,6 @@ ul cs_hash(handle_t h) {
 }
 
 int cs_cmp(void *_, handle_t a, handle_t b) {
+    if (!TAG_EQ(a, b, STR)) return -1;
     return strcmp(CS(a)->str, CS(b)->str);
 }

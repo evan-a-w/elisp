@@ -20,5 +20,6 @@ void list_finalize(void *l);
 void list_trace(void *l);
 handle_t list_insert_or(handle_t l, cmp_mod_t *cmp, handle_t (*f)(handle_t, handle_t));
 bool list_search(handle_t l, cmp_mod_t *cmp, handle_t *save_to);
+handle_t list_erase_if(handle_t l, cmp_mod_t *cmp, bool (*erase)(handle_t));
 
 #endif

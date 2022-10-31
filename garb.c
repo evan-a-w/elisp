@@ -4,8 +4,6 @@
 
 #include "garb.h"
 
-#define CHECKY
-
 #ifdef CHECKY
 typedef struct vals {
     void *data;
@@ -21,8 +19,9 @@ static vals *all_vals = NULL;
 #endif
 
 typedef struct header {
-    age_t age;
-    bool traced;
+    int age : 2;
+    int traced : 1;
+    int tag : 29;
     size_t size;
     void *data;
     handle_t next;
@@ -172,6 +171,7 @@ char *allocate_old(size_t size) {
 static handle_t header_init(
     size_t size,
     handle_t next,
+    int tag,
     void (*trace)(void *),
     void (*finalize)(void *),
     void *data
@@ -183,6 +183,7 @@ static handle_t header_init(
     *header = (header_t) {
         .traced = false,
         .age = YOUNG,
+        .tag = tag,
         .size = size,
         .data = data,
         .next = next,
@@ -300,7 +301,7 @@ bool gc_collect_minor(void) {
     return true;
 }
 
-handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+handle_t galloct(size_t size, int tag, void (*trace)(void *), void (*finalize)(void *)) {
     char *data;
     // If size is too big, we put it on the old heap isntantly
     if (size > YOUNG_HEAP_SIZE) {
@@ -313,7 +314,7 @@ handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
         data = gc_state.young_heap_next;
         gc_state.young_heap_next += size;
     }
-    handle_t handle = header_init(size, gc_state.young_head, trace, finalize, data);
+    handle_t handle = header_init(size, gc_state.young_head, tag, trace, finalize, data);
     if (handle == NULL_HANDLE) return handle;
 
     header_t *header = get_header(handle);
@@ -331,6 +332,10 @@ handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
     gc_state.total_allocated += size;
 
     return handle;
+}
+
+handle_t galloc(size_t size, void (*trace)(void *), void (*finalize)(void *)) {
+    return galloct(size, 0, trace, finalize);
 }
 
 void gc_destroy() {
@@ -408,6 +413,18 @@ void checky() {
         v = next;
     }
     all_vals = NULL;
+}
+
+int tag(handle_t h) {
+    return get_header(h)->tag;
+}
+
+void unsafe_set_data(handle_t h, void *val) {
+    get_header(h)->data = val;
+}
+
+void set_tag(handle_t handle, int tag) {
+    get_header(handle)->tag = tag;
 }
 
 #endif

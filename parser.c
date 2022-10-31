@@ -77,9 +77,12 @@ ast_t *process_special(ast_t *sexpr) {
                 spec = Let;
             }
             if (is_spec) {
-                free(first->s);
-                first->type = SpecialForm;
-                first->special = spec;
+                free_ast(first);
+                sexpr_t *n = l->next;
+                free(l);
+                sexpr->l = n;
+                sexpr->type = SpecialForm;
+                sexpr->special = spec;
             }
         }
     } else {
@@ -136,6 +139,13 @@ ast_t *parse_one(tokeniser_t *t) {
     case Ident:
         return make_ast((ast_t) { .type = AtomSymbol, .s = curr_token.s });
     case Str:
+        if (strcmp(curr_token.s, "T") == 0) {
+            free(curr_token.s);
+            return make_ast((ast_t) { .type = AtomBool, .b = true });
+        } else if (strcmp(curr_token.s, "F") == 0) {
+            free(curr_token.s);
+            return make_ast((ast_t) { .type = AtomBool, .b = false });
+        }
         return make_ast((ast_t) { .type = AtomString, .s = curr_token.s });
     case Int:
         return make_ast((ast_t) { .type = AtomInt, .i = curr_token.i });
@@ -191,6 +201,9 @@ void print_ast(FILE *f, ast_t *ast) {
     case AstError:
         printf("Error: %s", ast->s);
         break;
+    case AtomBool:
+        fprintf(f, "%s", ast->b ? "T" : "F");
+        break;
     case AtomString:
         printf("\"%s\"", ast->s);
         break;
@@ -211,21 +224,29 @@ void print_ast(FILE *f, ast_t *ast) {
         printf(")");
         break;
     case SpecialForm:
+    {
+        char *s;
         switch (ast->special) {
         case Quote:
-            printf("quote");
-            break;
+            s = "quote";
         case If:
-            printf("if");
+            s = "if";
             break;
         case Var:
-            printf("var");
+            s = "var";
             break;
         case Let:
-            printf("let");
+            s = "let";
             break;
         }
+        printf("(%s", s);
+        for (sexpr_t *s = ast->l; s != NULL; s = s->next) {
+            printf(" ");
+            print_ast(f, s->val);
+        }
+        printf(")");
         break;
+    }
     default:
         printf("Unknown ast type");
         break;
@@ -245,6 +266,9 @@ void debug_print_ast(ast_t *ast) {
     switch (ast->type) {
     case AstError:
         fprintf(stderr, ", { s: %s }", ast->s);
+        break;
+    case AtomBool:
+        fprintf(stderr, ", { b: %d }", ast->b);
         break;
     case AtomString:
         fprintf(stderr, ", { s: %s }", ast->s);

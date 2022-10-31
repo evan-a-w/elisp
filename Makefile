@@ -3,6 +3,12 @@ CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 
 all: garb_test.exe treap_test.exe parse_test.exe
 
+eval.o: eval.c eval.h env.o
+	$(CC) $(CFLAGS) -c eval.c
+
+env.o: env.c env.h map.h list.h const_string.h roots.h
+	$(CC) $(CFLAGS) -c env.c
+
 parse_test.exe: parse_test.o ast.a
 	$(CC) $(CFLAGS) -o parse_test.exe parse_test.o ast.a
 
@@ -24,11 +30,14 @@ treap_test.exe: treap.o treap_test.o gclib.a
 treap_test.o: treap_test.c garb.h treap.h roots.h
 	$(CC) $(CFLAGS) -c treap_test.c
 
-map.o: map.c map.h garb.h roots.h list.h const_string.h api.h
+map.o: map.c map.h garb.h roots.h list.h const_string.h api.h base_types.h
 	$(CC) $(CFLAGS) -c map.c
 
-list.o: list.h garb.h api.h roots.h
+list.o: list.h garb.h api.h roots.h base_types.h
 	$(CC) $(CFLAGS) -c list.c
+
+const_string.o: const_string.c const_string.h base_types.h
+	$(CC) $(CFLAGS) -c const_string.c
 
 treap.o: treap.c treap.h garb.h
 	$(CC) $(CFLAGS) -c treap.c
@@ -47,9 +56,6 @@ long_table.o: long_table.c long_table.h
 
 garb.o: garb.c garb.h
 	$(CC) $(CFLAGS) -c garb.c
-
-const_string.o: const_string.c const_string.h
-	$(CC) $(CFLAGS) -c const_string.c
 
 clean:
 	rm -f *.o *.a *.exe
