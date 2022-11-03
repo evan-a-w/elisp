@@ -32,7 +32,7 @@ typedef struct ast {
         char *s;
         long long i;
         sexpr_t *l;
-        special_form_t special;
+        struct { sexpr_t *l; special_form_t spec; } special;
         bool b;
     };
 } ast_t;

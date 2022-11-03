@@ -11,6 +11,10 @@ void list_trace(void *p) {
     }
 }
 
+void list_finalize(void *p) {
+    finalize(((list_node_t *)p)->val);
+}
+
 handle_t list_copy_shallow(handle_t h) {
     if (h == NULL_HANDLE) return NULL_HANDLE;
     push_root(h);
@@ -60,10 +64,6 @@ void list_for_each(handle_t l, void (*f)(handle_t)) {
         f(list_head(l));
         l = list_tail(l);
     }
-}
-
-void list_finalize(void *p) {
-    finalize(((list_node_t *)p)->val);
 }
 
 handle_t list_insert_or(handle_t l, cmp_mod_t *cmp, handle_t (*f)(handle_t, handle_t)) {

@@ -82,9 +82,9 @@ ast_t *process_special(ast_t *sexpr) {
                 free_ast(first);
                 sexpr_t *n = l->next;
                 free(l);
-                sexpr->l = n;
+                sexpr->special.l = n;
+                first->special.spec = spec;
                 sexpr->type = SpecialForm;
-                sexpr->special = spec;
             }
         }
     } else {

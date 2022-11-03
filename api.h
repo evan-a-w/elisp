@@ -48,7 +48,6 @@ typedef enum {
     _IfE,
     _VarE,
     _LetE,
-    _DoE,
     _Apply,
 } eval_spec_t;
 
@@ -72,4 +71,10 @@ typedef struct {
     handle_t f;
 } ife_t;
 
+typedef struct {
+    handle_t list_to_set;
+    handle_t body;
+} lete_t;
+
 #endif
+
