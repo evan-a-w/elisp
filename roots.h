@@ -10,8 +10,10 @@ unsigned long prof(unsigned long handle);
 // stack
 unsigned long push_root(unsigned long handle);
 unsigned long pro(unsigned long handle);
-void pop_root(void);
+unsigned long pop_root(void);
 void pop_roots(int);
+unsigned long roots_size(void);
+unsigned long peek_root(void);
 
 // hashmap
 unsigned long root_global(unsigned long handle);

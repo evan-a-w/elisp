@@ -3,6 +3,10 @@
 #include <assert.h>
 
 #include "garb.h"
+#include "vec.h"
+#include "vec_macro.h"
+
+#define CHECKY
 
 #ifdef CHECKY
 typedef struct vals {
@@ -35,13 +39,16 @@ typedef struct free_range {
     handle_t end;
 } free_range_t;
 
+typedef free_range_t fr;
+
 #define HEADER_SIZE (sizeof(struct header))
+
+VEC_DEFINE(fr)
+VEC_CREATE(fr)
 
 static header_t *header_table = NULL;
 static size_t header_table_capacity = 0;
-static free_range_t *free_stack = NULL;
-static size_t free_stack_size = 0;
-static size_t free_stack_capacity = 0;
+static fr_vec *free_ranges = NULL;
 
 header_t *get_header(handle_t t) {
     if (t == NULL_HANDLE) {
@@ -50,15 +57,26 @@ header_t *get_header(handle_t t) {
     return &header_table[t - 1];
 }
 
+handle_t get_handle(void);
+
 void condense_header_table() {
-    // TODO
+    // ul curr_cap = header_table_capacity;
+    // header_table_capacity /= 2;
+    // for (ul i = header_table_capacity; i < curr_cap; i++) {
+    //     header_t *h = &header_table[i];
+    //     if (h->data != NULL) {
+    //         handle_t nh = get_handle();
+    //         *get_header(nh) = *h;
+    //     }
+    // }
+    // header_table = realloc(header_table, header_table_capacity * sizeof(header_t));
 }
 
 void trace_only(handle_t h, age_t age) {
     if (h) {
         header_t *header = get_header(h);
         if (header->traced) return;
-        if (header->age == age) {
+        if ((age_t)header->age == age) {
             header->traced = true;
             if (header->trace) header->trace(header->data);
         }
@@ -66,14 +84,7 @@ void trace_only(handle_t h, age_t age) {
 }
 
 void free_stack_push(handle_t start, handle_t end) {
-    if (free_stack_size == free_stack_capacity) {
-        free_stack_capacity = free_stack_capacity * 2 + 1;
-        free_stack = realloc(free_stack, free_stack_capacity * sizeof(free_range_t));
-        assert(free_stack);
-    }
-    free_stack[free_stack_size].start = start - 1;
-    free_stack[free_stack_size].end = end - 1;
-    free_stack_size++;
+    fr_push(free_ranges, (free_range_t){start - 1, end - 1});
 }
 
 void free_handle(handle_t h) {
@@ -83,22 +94,23 @@ void free_handle(handle_t h) {
 }
 
 handle_t get_handle() {
-    if (free_stack_size == 0) {
+    if (free_ranges->size == 0) {
         size_t old_cap = header_table_capacity;
         header_table_capacity = header_table_capacity * 2 + 1;
         header_table = realloc(header_table, HEADER_SIZE * header_table_capacity);
+        assert(header_table);
         for (handle_t h = old_cap; h < header_table_capacity; h++)
             header_table[h].data = NULL;
         free_stack_push(old_cap + 1, header_table_capacity);
-    } else if (free_stack_size * 2 > header_table_capacity) {
+    } else if (free_ranges->size * 2 > header_table_capacity) {
         condense_header_table();
     }
-    free_range_t range = free_stack[free_stack_size - 1];
-    handle_t res = range.start;
-    if (range.start == range.end) {
-        free_stack_size--;
+    free_range_t *range = fr_peek_p(free_ranges);
+    handle_t res = range->start;
+    if (range->start == range->end) {
+        fr_pop(free_ranges);
     } else {
-        free_stack[free_stack_size - 1].start++;
+        range->start += 1;
     }
     return res + 1;
 }
@@ -153,6 +165,14 @@ bool gc_init() {
     gc_state.old_heap_size = 0;
     gc_state.old_head = NULL_HANDLE;
     gc_state.old_heap_capacity = OLD_HEAP_DEFAULT;
+
+    if (!(free_ranges = fr_vinit(10))) {
+        free(gc_state.young_heap);
+        free(gc_state.old_heap);
+        gc_state.young_heap = NULL;
+        gc_state.old_heap = NULL;
+        return false;
+    }
 
     return true;
 }
@@ -351,9 +371,9 @@ void gc_destroy() {
         }
     }
     free(header_table);
-    free(free_stack);
     free(gc_state.old_heap);
     free(gc_state.young_heap);
+    fr_vfree(free_ranges);
     destroy_roots();
 }
 

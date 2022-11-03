@@ -1,7 +1,7 @@
 #include "garb.h"
 #include "list.h"
 #include "roots.h"
-#include "base_types.h"
+#include "api.h"
 
 void list_trace(void *p) {
     list_node_t *n = p;
@@ -42,11 +42,22 @@ handle_t list_tail(handle_t l) {
     return L(l)->next;
 }
 
+void list_for_each_e_rev(handle_t l, void *e, void (*f)(void *, handle_t)) {
+    if (l == NULL_HANDLE) return;
+    list_for_each_e_rev(L(l)->next, e, f);
+    f(e, L(l)->val);
+}
+
+void list_for_each_e(handle_t l, void *e, void (*f)(void *, handle_t)) {
+    while (l != NULL_HANDLE) {
+        f(e, list_head(l));
+        l = list_tail(l);
+    }
+}
+
 void list_for_each(handle_t l, void (*f)(handle_t)) {
     while (l != NULL_HANDLE) {
-        handle_t val = list_head(l);
-
-        f(val);
+        f(list_head(l));
         l = list_tail(l);
     }
 }
@@ -98,4 +109,25 @@ handle_t list_erase_if(handle_t l, cmp_mod_t *cmp, bool (*erase)(handle_t)) {
     L(nl)->next = list_erase_if(node->next, cmp, erase);
     pop_root();
     return nl;
+}
+
+handle_t list_map(handle_t l, void *e, handle_t (*f)(void *, handle_t)) {
+    if (l == NULL_HANDLE) return NULL_HANDLE;
+    handle_t head = pro(list_copy_shallow(l));
+    handle_t nl = head;
+    while (nl != NULL_HANDLE) {
+        L(nl)->val = f(e, L(nl)->val);
+        L(nl)->next = list_copy_shallow(L(nl)->next);
+    }
+    pop_root();
+    return head;
+}
+
+unsigned long list_len(handle_t l) {
+    unsigned long len = 0;
+    while (l != NULL_HANDLE) {
+        len++;
+        l = list_tail(l);
+    }
+    return len;
 }

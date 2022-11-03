@@ -15,9 +15,10 @@ typedef enum ast_type {
 
 typedef enum special_form {
     If,
+    Var,
     Let,
     Quote,
-    Var,
+    Do,
 } special_form_t;
 
 typedef struct sexpr {

@@ -5,6 +5,7 @@
 #include "garb.h"
 #include "roots.h"
 #include "long_table.h"
+#include "vec.h"
 
 typedef struct node {
     long long val;
@@ -15,61 +16,53 @@ typedef struct node {
 static long_table_t roots = NULL;
 static node_t *root_list = NULL;
 
-static long long *frames = NULL;
-static long long frames_size = 0;
-static long long frames_capacity = 0;
+static ul_vec *root_stack = NULL;
+static ul_vec *frames = NULL;
 
-static handle_t *root_stack = NULL;
-static long long root_stack_size = 0;
-static long long root_stack_capacity = 0;
+unsigned long roots_size(void) {
+    return root_stack->size;
+}
+
+unsigned long peek_root(void) {
+    return ul_peek(root_stack);
+}
 
 void for_each_root(void (*f)(handle_t)) {
     for (node_t *node = root_list; node != NULL; node = node->next) {
         f(node->val);
     }
 
-    for (long long i = 0; i < root_stack_size; i++) {
-        f(root_stack[i]);
+    for (ul i = 0; i < root_stack->size; i++) {
+        f(root_stack->arr[i]);
     }
 }
 
 void pop_roots(int n) {
-    root_stack_size -= n;
-    if (root_stack_size < 0) root_stack_size = 0;
+    root_stack->size -= n;
+    if (root_stack->size < 0) root_stack->size = 0;
+    ul_downsize(root_stack);
 }
 
-void pop_root() {
-    if (root_stack_size == 0) return;
-    root_stack_size--;
+unsigned long pop_root() {
+    return ul_pop(root_stack);
 }
 
 void pop_frame() {
-    if (frames_size == 0) return;
-    frames_size--;
-    pop_roots(frames[frames_size]);
+    pop_roots(ul_pop(frames));
 }
 
 handle_t push_root_in_frame(handle_t h) {
     push_root(h);
-    frames[frames_size - 1]++;
+    ++*ul_peek_p(frames);
     return h;
 }
 
 void new_frame() {
-    if (frames_size == frames_capacity) {
-        frames_capacity = frames_capacity * 2 + 1;
-        frames = realloc(frames, frames_capacity * sizeof(long long));
-    }
-
-    frames[frames_size++] = 0;
+    ul_push(frames, 0);
 }
 
 handle_t push_root(handle_t handle) {
-    if (root_stack_size == root_stack_capacity) {
-        root_stack_capacity = root_stack_capacity * 2 + 1;
-        root_stack = realloc(root_stack, root_stack_capacity * sizeof(handle_t));
-    }
-    root_stack[root_stack_size++] = handle;
+    ul_push(root_stack, handle);
     return handle;
 }
 
@@ -81,17 +74,14 @@ void init_roots(void) {
     roots = long_table_new();
     root_list = NULL;
     root_stack = NULL;
-    root_stack_size = 0;
-    root_stack_capacity = 0;
-    frames = NULL;
-    frames_size = 0;
-    frames_capacity = 0;
+    root_stack = ul_vinit(10);
+    frames = ul_vinit(0);
 }
 
 void destroy_roots(void) {
     long_table_free(roots);
-    free(root_stack);
-    free(frames);
+    ul_vfree(root_stack);
+    ul_vfree(frames);
     while (root_list) {
         node_t *next = root_list->next;
         free(root_list);

@@ -75,6 +75,8 @@ ast_t *process_special(ast_t *sexpr) {
                 spec = Var;
             } else if ((is_spec = (strcmp(first->s, "let") == 0))) {
                 spec = Let;
+            } else if ((is_spec = (strcmp(first->s, "do") == 0))) {
+                spec = Do;
             }
             if (is_spec) {
                 free_ast(first);
@@ -237,6 +239,9 @@ void print_ast(FILE *f, ast_t *ast) {
             break;
         case Let:
             s = "let";
+            break;
+        case Do:
+            s = "do";
             break;
         }
         printf("(%s", s);

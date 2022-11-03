@@ -20,11 +20,20 @@ typedef enum {
 
 typedef unsigned long handle_t;
 typedef struct header header_t;
+typedef void (*hf_t)(handle_t);
+
+typedef struct {
+    hf_t trace;
+    hf_t finalize;
+} gm;
 
 // Provided by the linked code
 void for_each_root(void (*f)(handle_t));
 void init_roots(void);
 void destroy_roots(void);
+
+void set_trace(int tag, void (*trace)(void *));
+void set_finalize(int tag, void (*finalize)(void *));
 
 bool gc_init();
 void gc_destroy();

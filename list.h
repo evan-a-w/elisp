@@ -21,5 +21,9 @@ void list_trace(void *l);
 handle_t list_insert_or(handle_t l, cmp_mod_t *cmp, handle_t (*f)(handle_t, handle_t));
 bool list_search(handle_t l, cmp_mod_t *cmp, handle_t *save_to);
 handle_t list_erase_if(handle_t l, cmp_mod_t *cmp, bool (*erase)(handle_t));
+void list_for_each_rev_e(handle_t l, void *e, void (*f)(void *, handle_t));
+void list_for_each_e(handle_t l, void *e, void (*f)(void *, handle_t));
+handle_t list_map(handle_t l, void *e, handle_t (*f)(void *, handle_t));
+unsigned long list_len(handle_t l);
 
 #endif

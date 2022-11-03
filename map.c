@@ -6,7 +6,6 @@
 #include "map.h"
 #include "list.h"
 #include "api.h"
-#include "base_types.h"
 
 void hpair_trace(void *p) {
     hpair_t *hp = p;
