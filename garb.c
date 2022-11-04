@@ -436,6 +436,7 @@ void checky() {
 }
 
 int tag(handle_t h) {
+    if (!h) return 0;
     return get_header(h)->tag;
 }
 

@@ -14,7 +14,8 @@ void hpair_trace(void *p) {
 }
 
 int hpair_cmp_key(void *f, handle_t a, handle_t b) {
-    if (!TAG_EQ(a, b, HPAIR)) return -1;
+    if (!TAG_EQ(a, b, HPAIR))
+        printf("Warning: comparing handles of different types (expected HPAIR)\n");
     int (*cmp_fn)(handle_t, handle_t) = f;
     return cmp_fn(D(a, hpair_t *)->key, D(b, hpair_t *)->key);
 }
@@ -89,12 +90,10 @@ handle_t map_rotate_left(handle_t h) {
 
 handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t val, val_update_t f) {
     if (t == NULL_HANDLE) {
-        handle_t res = galloct(sizeof(map_node_t), MAP, map_trace, map_finalize);
-        pro(res);
-        handle_t hp = hpair_new(key_pkg->key, val);
-        pro(hp);
+        handle_t res = pro(galloct(sizeof(map_node_t), MAP, map_trace, map_finalize));
+        handle_t hp = pro(hpair_new(key_pkg->key, val));
         *M(res) = (map_node_t) {
-            .key = key_pkg->key_hash(key_pkg->key),
+            .key = key,
             .priority = rand(),
             .l = NULL_HANDLE,
             .hpair_list = list_new(hp),
@@ -106,12 +105,12 @@ handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t
     new_frame();
     t = prof(map_copy_shallow(t));
     if (key < M(t)->key) {
-        M(t)->l = prof(map_insert(M(t)->l, key_pkg, val, f));
+        M(t)->l = prof(map_insert_(M(t)->l, key, key_pkg, val, f));
         if (M(M(t)->l)->priority > M(t)->priority) {
             t = prof(map_rotate_right(t));
         }
     } else if (key != M(t)->key) {
-        M(t)->r = prof(map_insert(M(t)->r, key_pkg, val, f));
+        M(t)->r = prof(map_insert_(M(t)->r, key, key_pkg, val, f));
         if (M(M(t)->r)->priority > M(t)->priority) {
             t = prof(map_rotate_left(t));
         }
@@ -176,78 +175,51 @@ bool map_search(handle_t t, map_mod_t *key_pkg, handle_t *save_to) {
     return map_search_(t, key, key_pkg, save_to);
 }
 
-handle_t map_erase_(handle_t h, unsigned long key, map_mod_t *key_pkg) {
+handle_t map_erase_(handle_t h, unsigned long key, map_mod_t *key_pkg,
+                    bool *found, handle_t *save_to) {
     if (h == NULL_HANDLE) {
         return NULL_HANDLE;
     }
     new_frame();
     h = prof(map_copy_shallow(h));
     if (key == M(h)->key) {
-        if (M(h)->l == NULL_HANDLE) {
-            h = M(h)->r;
-        } else if (M(h)->r == NULL_HANDLE) {
-            h = M(h)->l;
-        } else {
-            if (M(M(h)->l)->priority > M(M(h)->r)->priority) {
-                h = prof(map_rotate_right(h));
-                M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg));
+        handle_t to_search = prof(hpair_new(key_pkg->key, NULL_HANDLE));
+        cmp_mod_t cmp_mod = (cmp_mod_t) {
+            .x = to_search,
+            .f = hpair_cmp_key,
+            .e = key_pkg->key_cmp,
+        };
+        M(h)->hpair_list = list_del(M(h)->hpair_list, &cmp_mod, found, save_to);
+        if (*found) {
+            if (M(h)->l == NULL_HANDLE) {
+                h = M(h)->r;
+            } else if (M(h)->r == NULL_HANDLE) {
+                h = M(h)->l;
             } else {
-                h = prof(map_rotate_left(h));
-                M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg));
+                if (M(M(h)->l)->priority > M(M(h)->r)->priority) {
+                    h = prof(map_rotate_right(h));
+                    M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg, NULL, NULL));
+                } else {
+                    h = prof(map_rotate_left(h));
+                    M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg, NULL, NULL));
+                }
             }
         }
     } else if (key < M(h)->key) {
-        M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg));
+        M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg, found, save_to));
     } else {
-        M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg));
+        M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg, found, save_to));
     }
     pop_frame();
     return h;
 }
 
-handle_t map_erase_if_(handle_t h, unsigned long key, map_mod_t *key_pkg,
-                       bool (*erase)(handle_t)) {
-    if (h == NULL_HANDLE) {
-        return NULL_HANDLE;
-    }
-    new_frame();
-    h = prof(map_copy_shallow(h));
-    if (key == M(h)->key) {
-        handle_t to_erase = prof(hpair_new(key_pkg->key, NULL_HANDLE));
-        cmp_mod_t cmp_mod = (cmp_mod_t) {
-            .x = to_erase,
-            .f = hpair_cmp_key,
-            .e = key_pkg->key_cmp,
-        };
-        M(h)->hpair_list = prof(list_erase_if(M(h)->hpair_list, &cmp_mod, erase));
-        if (M(h)->l == NULL_HANDLE) {
-            h = M(h)->r;
-        } else if (M(h)->r == NULL_HANDLE) {
-            h = M(h)->l;
-        } else {
-            if (M(M(h)->l)->priority > M(M(h)->r)->priority) {
-                h = prof(map_rotate_right(h));
-                M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg));
-            } else {
-                h = prof(map_rotate_left(h));
-                M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg));
-            }
-        }
-    } else if (key < M(h)->key) {
-        M(h)->l = prof(map_erase_(M(h)->l, key, key_pkg));
-    } else {
-        M(h)->r = prof(map_erase_(M(h)->r, key, key_pkg));
-    }
-    pop_frame();
-    return h;
+handle_t map_del(handle_t h, map_mod_t *key_pkg, bool *found, handle_t *save_to) {
+    unsigned long key = key_pkg->key_hash(key_pkg->key);
+    return map_erase_(h, key, key_pkg, found, save_to);
 }
 
 handle_t map_erase(handle_t h, map_mod_t *key_pkg) {
     unsigned long key = key_pkg->key_hash(key_pkg->key);
-    return map_erase_(h, key, key_pkg);
-}
-
-handle_t map_erase_if(handle_t h, map_mod_t *key_pkg, bool (*erase)(handle_t)) {
-    unsigned long key = key_pkg->key_hash(key_pkg->key);
-    return map_erase_if_(h, key, key_pkg, erase);
+    return map_erase_(h, key, key_pkg, NULL, NULL);
 }

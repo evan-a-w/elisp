@@ -14,14 +14,14 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Could not open file %s\n", argv[i]);
         } else {
             tokeniser_t *t = new_tokeniser(f);
-            program_t *p = parse(t);
+            ast_t *p = parse(t);
             if (p == NULL) {
-                fprintf(stderr, "Could not parse file %s\n", argv[i]);
+                fprintf(stderr, "Could not parse file %s", argv[i]);
             } else {
-                print_program(stdout, p);
+                print_ast(stdout, p);
             }
-            printf("------------------------\n");
-            free_program(p);
+            printf("\n------------------------\n");
+            free_ast(p);
             free_tokeniser(t);
         }
     }

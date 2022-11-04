@@ -35,26 +35,21 @@ void free_sexpr(sexpr_t *l) {
     }
 }
 
-void free_program(program_t *l) {
-    if (l != NULL) {
-        free_ast(l->ast);
-        free_program(l->next);
-        free(l);
-    }
-}
-
 void free_ast(ast_t *ast) {
     switch (ast->type) {
-    case AstError:
-    case AtomString:
-    case AtomSymbol:
-        free(ast->s);
-        break;
-    case SExpr:
-        free_sexpr(ast->l);
-        break;
-    default:
-        break;
+        case AstError:
+        case AtomString:
+        case AtomSymbol:
+            free(ast->s);
+            break;
+        case SExpr:
+            free_sexpr(ast->l);
+            break;
+        case SpecialForm:
+            free_sexpr(ast->special.l);
+            break;
+        default:
+            break;
     }
     free(ast);
 }
@@ -77,13 +72,15 @@ ast_t *process_special(ast_t *sexpr) {
                 spec = Let;
             } else if ((is_spec = (strcmp(first->s, "do") == 0))) {
                 spec = Do;
+            } else if ((is_spec = (strcmp(first->s, "fn") == 0))) {
+                spec = Fn;
             }
             if (is_spec) {
                 free_ast(first);
                 sexpr_t *n = l->next;
                 free(l);
                 sexpr->special.l = n;
-                first->special.spec = spec;
+                sexpr->special.spec = spec;
                 sexpr->type = SpecialForm;
             }
         }
@@ -156,7 +153,7 @@ ast_t *parse_one(tokeniser_t *t) {
         ast_t *next = parse_one(t);
         ast_t *res = make_ast((ast_t) { .type = SExpr, .l = NULL });
         res->l = malloc(sizeof *res->l);
-        res->l->val = make_ast((ast_t) { .type = SpecialForm, .special = Quote, });
+        res->l->val = make_ast((ast_t) { .type = SpecialForm, .special.spec = Quote, });
         res->l->next = malloc(sizeof *res->l->next);
         *res->l->next = (sexpr_t) { .val = next, .next = NULL };
         return res;
@@ -175,86 +172,102 @@ ast_t *parse_one(tokeniser_t *t) {
     }
 }
 
-program_t *parse(tokeniser_t *t) {
-    program_t *res = NULL, *curr = NULL;
+ast_t *parse(tokeniser_t *t) {
+    sexpr_t *res = NULL, *curr = NULL;
     while (!is_eof(t)) {
         ast_t *next = parse_one(t);
         if (next->type == AstError) {
             printf("Error in parsing: %s\n", next->s);
             free_ast(next);
-            free_program(res);
+            free_sexpr(res);
             return NULL;
         }
 
-        program_t *new_p = malloc(sizeof *new_p);
-        *new_p = (program_t) { .ast = next, .next = NULL };
         if (res == NULL) {
-            res = curr = new_p;
+            res = malloc(sizeof *res);
+            *res = (sexpr_t) { .val = next, .next = NULL };
+            curr = res;
         } else {
-            curr->next = new_p;
-            curr = new_p;
+            sexpr_t *new_s = malloc(sizeof *new_s);
+            *new_s = (sexpr_t) { .val = next, .next = NULL };
+            curr->next = new_s;
+            curr = new_s;
         }
     }
-    return res;
+    return make_ast((ast_t) {
+        .type = SpecialForm,
+        .special.l = res,
+        .special.spec = Do
+    });
+}
+
+void print_sexpr(FILE *f, sexpr_t *s) {
+    printf("(");
+    for (; s != NULL; s = s->next) {
+        print_ast(f, s->val);
+        if (s->next != NULL) {
+            printf(" ");
+        }
+    }
+    printf(")");
 }
 
 void print_ast(FILE *f, ast_t *ast) {
     switch (ast->type) {
-    case AstError:
-        printf("Error: %s", ast->s);
-        break;
-    case AtomBool:
-        fprintf(f, "%s", ast->b ? "T" : "F");
-        break;
-    case AtomString:
-        printf("\"%s\"", ast->s);
-        break;
-    case AtomSymbol:
-        printf("%s", ast->s);
-        break;
-    case AtomInt:
-        printf("%lld", ast->i);
-        break;
-    case SExpr:
-        printf("(");
-        for (sexpr_t *s = ast->l; s != NULL; s = s->next) {
-            print_ast(f, s->val);
-            if (s->next != NULL) {
-                printf(" ");
+        case AstError:
+            printf("Error: %s", ast->s);
+            break;
+        case AtomBool:
+            fprintf(f, "%s", ast->b ? "T" : "F");
+            break;
+        case AtomString:
+            printf("\"%s\"", ast->s);
+            break;
+        case AtomSymbol:
+            printf("%s", ast->s);
+            break;
+        case AtomInt:
+            printf("%lld", ast->i);
+            break;
+        case SExpr:
+            print_sexpr(f, ast->l);
+            break;
+        case SpecialForm:
+        {
+            char *s;
+            switch (ast->special.spec) {
+                case Quote:
+                    s = "quote";
+                case If:
+                    s = "if";
+                    break;
+                case Var:
+                    s = "var";
+                    break;
+                case Let:
+                    s = "let";
+                    break;
+                case Do:
+                    s = "do";
+                    break;
+                case Fn:
+                    s = "fn";
+                    break;
+                default:
+                    printf("Unknown special form %d\n", ast->special.spec);
+                    exit(1);
             }
-        }
-        printf(")");
-        break;
-    case SpecialForm:
-    {
-        char *s;
-        switch (ast->special) {
-        case Quote:
-            s = "quote";
-        case If:
-            s = "if";
-            break;
-        case Var:
-            s = "var";
-            break;
-        case Let:
-            s = "let";
-            break;
-        case Do:
-            s = "do";
+            printf("(%s", s);
+            for (sexpr_t *s = ast->l; s != NULL; s = s->next) {
+                printf(" ");
+                print_ast(f, s->val);
+            }
+            printf(")");
             break;
         }
-        printf("(%s", s);
-        for (sexpr_t *s = ast->l; s != NULL; s = s->next) {
-            printf(" ");
-            print_ast(f, s->val);
-        }
-        printf(")");
-        break;
-    }
-    default:
-        printf("Unknown ast type");
-        break;
+        default:
+            printf("Unknown ast type");
+            break;
     }
 }
 

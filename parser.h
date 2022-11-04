@@ -19,6 +19,7 @@ typedef enum special_form {
     Let,
     Quote,
     Do,
+    Fn,
 } special_form_t;
 
 typedef struct sexpr {
@@ -46,9 +47,10 @@ void free_ast(ast_t *ast);
 void free_sexpr(sexpr_t *sexpr);
 void free_program(program_t *program);
 ast_t *parse_one(tokeniser_t *tokeniser);
-program_t *parse(tokeniser_t *tokeniser);
+ast_t *parse(tokeniser_t *tokeniser);
 void print_ast(FILE *f, ast_t *ast);
 void print_program(FILE *f, program_t *program);
 void debug_print_ast(ast_t *ast);
+void print_sexpr(FILE *f, sexpr_t *s);
 
 #endif

@@ -6,6 +6,7 @@
 #include "eval.h"
 
 #define I(h) (D((h), long long))
+#define B(h) (D((h), bool))
 #define TAG_EQ(a, b, t) ((a) == NULL_HANDLE || (b) == NULL_HANDLE || ((tag((a)) == tag((b))) && tag((a)) == (t)))
 
 typedef unsigned long (*hash_fn_t)(handle_t);
@@ -18,9 +19,7 @@ typedef struct {
     void *e;
 } cmp_mod_t;
 
-int cmp_mod_apply(cmp_mod_t *mod, handle_t a) {
-    return mod->f(mod->e, mod->x, a);
-}
+int cmp_mod_apply(cmp_mod_t *mod, handle_t a);
 
 typedef enum {
     NON_USER,
@@ -29,7 +28,6 @@ typedef enum {
     SYMBOL,
     CFUN,
     CLOSURE,
-    CALL_CLOSURE,
     INT,
     BOOL,
     STR,
@@ -45,6 +43,7 @@ typedef enum {
     _Let,
     _Quote,
     _Do,
+    _Fn,
     _IfE,
     _VarE,
     _LetE,
@@ -62,19 +61,13 @@ typedef struct {
     handle_t sexpr;
     handle_t args;
     handle_t env;
-    size_t num_args;
     size_t arity;
 } closure_t;
 
-typedef struct {
-    handle_t t;
-    handle_t f;
-} ife_t;
+void trace_closure(void *p);
+void finalize_closure(void *p);
 
-typedef struct {
-    handle_t list_to_set;
-    handle_t body;
-} lete_t;
+void assert_is_symbol(handle_t);
 
 #endif
 

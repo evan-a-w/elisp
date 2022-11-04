@@ -27,7 +27,9 @@ ul cs_hash(handle_t h) {
     return hash;
 }
 
-int cs_cmp(void *_, handle_t a, handle_t b) {
-    if (!TAG_EQ(a, b, STR)) return -1;
+int cs_cmp(void *ignore, handle_t a, handle_t b) {
+    (void)ignore;
+    if (tag(a) != tag(b) || tag(a) != STR)
+        printf("Warning: comparing handles of different types (expected STR, got %d and %d)\n", tag(a), tag(b));
     return strcmp(CS(a)->str, CS(b)->str);
 }
