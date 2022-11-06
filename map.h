@@ -1,9 +1,8 @@
-#ifndef MULTITREAP_H
-#define MULTITREAP_H
+#ifndef MAP_H
+#define MAP_H
 
 #include "api.h"
 #include "garb.h"
-#include "treap.h"
 
 #define M(h) (D((h), map_node_t *))
 #define HP(h) (D((h), hpair_t *))
@@ -33,7 +32,7 @@ int hpair_cmp_key(void *, handle_t a, handle_t b);
 void map_trace(void *p);
 void map_finalize(void *p);
 
-handle_t map_insert(handle_t h, map_mod_t *key_pkg, handle_t val, val_update_t f);
+handle_t map_insert(handle_t h, map_mod_t *key_pkg, handle_t val);
 bool map_search(handle_t h, map_mod_t *key_pkg, handle_t *save_to);
 handle_t map_del(handle_t h, map_mod_t *key_pkg, bool *found, handle_t *save_to);
 handle_t map_erase(handle_t h, map_mod_t *key_pkg);

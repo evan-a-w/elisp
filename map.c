@@ -88,7 +88,7 @@ handle_t map_rotate_left(handle_t h) {
     return nr;
 }
 
-handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t val, val_update_t f) {
+handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t val) {
     if (t == NULL_HANDLE) {
         handle_t res = pro(galloct(sizeof(map_node_t), MAP, map_trace, map_finalize));
         handle_t hp = pro(hpair_new(key_pkg->key, val));
@@ -105,12 +105,12 @@ handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t
     new_frame();
     t = prof(map_copy_shallow(t));
     if (key < M(t)->key) {
-        M(t)->l = prof(map_insert_(M(t)->l, key, key_pkg, val, f));
+        M(t)->l = prof(map_insert_(M(t)->l, key, key_pkg, val));
         if (M(M(t)->l)->priority > M(t)->priority) {
             t = prof(map_rotate_right(t));
         }
     } else if (key != M(t)->key) {
-        M(t)->r = prof(map_insert_(M(t)->r, key, key_pkg, val, f));
+        M(t)->r = prof(map_insert_(M(t)->r, key, key_pkg, val));
         if (M(M(t)->r)->priority > M(t)->priority) {
             t = prof(map_rotate_left(t));
         }
@@ -122,16 +122,16 @@ handle_t map_insert_(handle_t t, unsigned long key, map_mod_t *key_pkg, handle_t
             .e = key_pkg->key_cmp,
         };
         M(t)->hpair_list = 
-            prof(list_insert_or(M(t)->hpair_list,
-                                &cmp_mod, f));
+            prof(list_insert_non_dup(M(t)->hpair_list,
+                                     &cmp_mod));
     }
     pop_frame();
     return t;
 }
 
-handle_t map_insert(handle_t t, map_mod_t *key_pkg, handle_t val, val_update_t f) {
+handle_t map_insert(handle_t t, map_mod_t *key_pkg, handle_t val) {
     long long key = key_pkg->key_hash(key_pkg->key);
-    return map_insert_(t, key, key_pkg, val, f);
+    return map_insert_(t, key, key_pkg, val);
 }
 
 void map_for_each_inorder(handle_t t, void (*f)(handle_t)) {
