@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 main.exe: main.o eval.a lib.a
 	$(CC) $(CFLAGS) -o main.exe main.o eval.a lib.a
 
-tests: garb_test.exe treap_test.exe parse_test.exe
+tests: garb_test.exe parse_test.exe env_test.exe
 
 main.o: main.c eval.h
 	$(CC) $(CFLAGS) -c main.c
@@ -39,17 +39,17 @@ parser.o: parser.c parser.h tokeniser.h
 tokeniser.o: tokeniser.c tokeniser.h
 	$(CC) $(CFLAGS) -c tokeniser.c
 
-env_test.exe: env.o env_test.o gclib.a roots.h list.h const_string.h list.o const_string.o map.o api.o eval.o eval.h
+env_test.exe: list.c env.o env_test.o gclib.a roots.h list.h const_string.h list.o const_string.o map.o api.o eval.o eval.h
 	$(CC) $(CFLAGS) -o env_test.exe env.o env_test.o list.o const_string.o gclib.a map.o api.o eval.o
+
+# map_test.exe: map_test.o gclib.a roots.h list.h const_string.h list.o const_string.o map.o api.o eval.o eval.h
+# 	$(CC) $(CFLAGS) -o map_test.exe map_test.o list.o const_string.o gclib.a map.o api.o eval.o
+# 
+# map_test.o: map_test.c
+# 	$(CC) $(CFLAGS) -c map_test.c
 
 env_test.o: env_test.c env.h
 	$(CC) $(CFLAGS) -c env_test.c
-
-treap_test.exe: treap.o treap_test.o gclib.a
-	$(CC) $(CFLAGS) -o treap_test.exe treap.o gclib.a treap_test.o
-
-treap_test.o: treap_test.c garb.h treap.h roots.h
-	$(CC) $(CFLAGS) -c treap_test.c
 
 map.o: map.c map.h garb.h roots.h list.h const_string.h api.h api.h
 	$(CC) -c map.c
@@ -57,14 +57,11 @@ map.o: map.c map.h garb.h roots.h list.h const_string.h api.h api.h
 api.o: api.c api.h
 	$(CC) $(CFLAGS) -c api.c
 
-list.o: list.h garb.h api.h roots.h api.h
+list.o: list.h garb.h api.h roots.h api.h list.c
 	$(CC) $(CFLAGS) -c list.c
 
 const_string.o: const_string.c const_string.h api.h
 	$(CC) $(CFLAGS) -c const_string.c
-
-treap.o: treap.c treap.h garb.h
-	$(CC) $(CFLAGS) -c treap.c
 
 garb_test.exe: garb_test.c gclib.a
 	$(CC) $(CFLAGS) -o garb_test.exe garb_test.c gclib.a

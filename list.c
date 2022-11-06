@@ -85,11 +85,10 @@ handle_t list_insert_or(handle_t l, cmp_mod_t *cmp, handle_t (*f)(handle_t, hand
     handle_t nl = pro(list_copy_shallow(l));
     list_node_t *node = L(nl);
     if (cmp_mod_apply(cmp, node->val) == 0)
-        L(nl)->val = f(cmp->x, L(nl)->val);
+        L(nl)->val = pro(f(cmp->x, L(nl)->val));
     else
-        L(nl)->next = list_insert_or(L(nl)->next, cmp, f);
-
-    pop_root();
+        L(nl)->next = pro(list_insert_or(L(nl)->next, cmp, f));
+    pop_roots(2);
     return nl;
 }
 

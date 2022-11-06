@@ -29,7 +29,8 @@ ul cs_hash(handle_t h) {
 
 int cs_cmp(void *ignore, handle_t a, handle_t b) {
     (void)ignore;
-    if (tag(a) != tag(b) || tag(a) != STR)
+    if ((tag(a) != STR && tag(a) != SYMBOL) || (tag(b) != STR && tag(b) != SYMBOL)) {
         printf("Warning: comparing handles of different types (expected STR, got %d and %d)\n", tag(a), tag(b));
+    }
     return strcmp(CS(a)->str, CS(b)->str);
 }

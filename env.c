@@ -34,7 +34,6 @@ handle_t env_push(handle_t env, handle_t key, handle_t val) {
     pro(key);
     pro(val);
     map_mod.key = key;
-    assert(tag(key) == STR);
     handle_t res = map_insert(env, &map_mod, val, concat_for_env);
     pop_roots(3);
     set_tag(res, ENV);
@@ -51,6 +50,7 @@ handle_t env_pop(handle_t env, handle_t key) {
     handle_t res = prof(map_del(env, &map_mod, &found, &save_to));
     if (found) {
         prof(save_to);
+        save_to = HP(save_to)->val;
         if (tag(save_to) == LIST) {
             save_to = prof(list_tail(save_to));
             res = env_push(res, key, save_to);
@@ -66,6 +66,7 @@ bool env_search(handle_t env, handle_t key, handle_t *save_to) {
     pro(key);
     map_mod.key = key;
     bool ans = map_search(env, &map_mod, save_to);
+    if (ans && save_to) *save_to = HP(*save_to)->val;
     if (ans && save_to && tag(*save_to) == LIST) *save_to = L(*save_to)->val;
     pop_roots(2);
     return ans;
