@@ -27,5 +27,7 @@ void list_for_each_e(handle_t l, void *e, void (*f)(void *, handle_t));
 handle_t list_map(handle_t l, void *e, handle_t (*f)(void *, handle_t));
 unsigned long list_len(handle_t l);
 handle_t list_del(handle_t l, cmp_mod_t *cmp, bool *found, handle_t *save_to);
+bool list_elem(handle_t l, cmp_mod_t *cmp);
+handle_t list_insert_non_dup(handle_t l, cmp_mod_t *cmp);
 
 #endif

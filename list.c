@@ -79,6 +79,27 @@ void list_for_each(handle_t l, void (*f)(handle_t)) {
     }
 }
 
+bool list_elem(handle_t l, cmp_mod_t *cmp) {
+    if (l == NULL_HANDLE) return false;
+    if (cmp_mod_apply(cmp, L(l)->val)) return true;
+    return list_elem(list_tail(l), cmp);
+}
+
+handle_t list_insert_non_dup(handle_t l, cmp_mod_t *cmp) {
+    if (l == NULL_HANDLE)
+        return list_new(cmp->x);
+    handle_t nl = pro(list_copy_shallow(l));
+    list_node_t *node = L(nl);
+    if (cmp_mod_apply(cmp, node->val) == 0) {
+        pop_root();
+        return nl;
+    } else
+        L(nl)->next = list_insert_non_dup(L(nl)->next, cmp);
+
+    pop_root();
+    return nl;
+}
+
 handle_t list_insert_or(handle_t l, cmp_mod_t *cmp, handle_t (*f)(handle_t, handle_t)) {
     if (l == NULL_HANDLE)
         return list_new(cmp->x);

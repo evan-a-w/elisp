@@ -35,8 +35,9 @@ handle_t env_push(handle_t env, handle_t key, handle_t val) {
     pro(val);
     map_mod.key = key;
     assert(tag(key) == STR);
-    handle_t res = map_insert(env, &map_mod, val, concat_for_env);
-    pop_roots(3);
+    handle_t lval = pro(list_new(val));
+    handle_t res = map_insert(env, &map_mod, lval, concat_for_env);
+    pop_roots(4);
     set_tag(res, ENV);
     return res;
 }

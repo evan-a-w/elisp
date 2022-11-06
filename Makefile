@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -Werror -Wpedantic -std=c11 -g -fsanitize=address
 main.exe: main.o eval.a lib.a
 	$(CC) $(CFLAGS) -o main.exe main.o eval.a lib.a
 
-tests: garb_test.exe treap_test.exe parse_test.exe
+tests: garb_test.exe treap_test.exe parse_test.exe env_test.exe
 
 main.o: main.c eval.h
 	$(CC) $(CFLAGS) -c main.c
