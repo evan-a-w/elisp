@@ -16,8 +16,8 @@ void hpair_trace(void *p) {
 int hpair_cmp_key(void *f, handle_t a, handle_t b) {
     if (!TAG_EQ(a, b, HPAIR))
         printf("Warning: comparing handles of different types (expected HPAIR)\n");
-    int (*cmp_fn)(handle_t, handle_t) = f;
-    return cmp_fn(D(a, hpair_t *)->key, D(b, hpair_t *)->key);
+    int (*cmp_fn)(void *, handle_t, handle_t) = f;
+    return cmp_fn(NULL, HP(a)->key, HP(b)->key);
 }
 
 void hpair_finalize(void *p) {

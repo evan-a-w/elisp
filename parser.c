@@ -84,12 +84,12 @@ ast_t *process_special(ast_t *sexpr) {
                 sexpr->type = SpecialForm;
             }
         }
-    } else {
-        free_ast(sexpr);
-        sexpr = malloc(sizeof *sexpr);
-        sexpr->type = AstError;
-        sexpr->s = allocate_string("Empty S-Expression");
-    }
+    }// else {
+    //     free_ast(sexpr);
+    //     sexpr = malloc(sizeof *sexpr);
+    //     sexpr->type = AstError;
+    //     sexpr->s = allocate_string("Empty S-Expression");
+    // }
     return sexpr;
 }
 

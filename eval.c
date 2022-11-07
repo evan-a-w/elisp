@@ -12,6 +12,7 @@
 typedef struct {
     handle_t env;
     ul index;
+    handle_t l;
 } arg_struct_thing;
 
 static eval_state_t st;
@@ -97,7 +98,8 @@ handle_t ast_to_val(ast_t *ast) {
             break;
         case SExpr:
             h = sexpr_to_list(ast->l);
-            set_tag(h, SEXPR);
+            if (h)
+                set_tag(h, SEXPR);
             break;
         case SpecialForm:
         {
@@ -127,7 +129,7 @@ eval_state_t st_new() {
         .st = ul_vinit(10),
         .res = ul_vinit(10),
         .to_eval = 0,
-        .env = env_push(NULL_HANDLE, cs_new("ENV"), NULL_HANDLE)
+        .env = env_push(NULL_HANDLE, cs_new("ENV"), cs_new("DUMMY"))
     };
 }
 
@@ -175,8 +177,7 @@ handle_t eval() {
         handle_t h = st_peek();
         printf("evaling ");
         print_value(h);
-        printf("\n");
-        printf("Env: ");
+        printf(" of %lu with env ", st.to_eval);
         print_value(st.env);
         printf("\n");
         switch (tag(h)) {
@@ -192,7 +193,8 @@ handle_t eval() {
                     exit(1);
                 }
                 st.to_eval--;
-                st_push_dep(st_pop());
+                st_pop();
+                st_push_dep(h);
                 break;
             case SPEC:
             {
@@ -260,6 +262,7 @@ handle_t eval() {
                     case _Apply:
                     {
                         ul num_in_sexpr = spec->data;
+                        st_pop();
                         ul index_in_res_vec = st.res->size - num_in_sexpr;
                         handle_t f = st.res->arr[index_in_res_vec++];
                         switch (tag(f)) {
@@ -274,35 +277,42 @@ handle_t eval() {
                                     arg_struct_thing a = {
                                         .env = clos->env,
                                         .index = index_in_res_vec,
+                                        .l = NULL_HANDLE,
                                     };
+                                    new_frame();
+                                    handle_t list = clos->args;
+                                    ul na = num_args;
+                                    while (list && na) {
+                                        push_arg_into_env(&a, L(list)->val);
+                                        na--;
+                                        list = L(list)->next;
+                                    }
+                                    a.l = list;
+                                    pop_frame();
                                     printf("Clos env: ");
                                     print_value(a.env);
                                     printf("\n");
-                                    new_frame();
-                                    list_for_each_e(clos->args, &a, push_arg_into_env);
-                                    pop_frame();
-                                    for (ul i = 0; i < num_args; i++) st_rpop();
+                                    st.res->size -= num_in_sexpr;
                                     if (num_args == D(f, closure_t *)->arity) {
                                         if (!tail_recurse()) {
                                             st_push(st.env);
                                         }
                                         st.env = a.env;
                                         st_push(D(f, closure_t *)->sexpr);
-                                        st_rpop();
                                     } else {
                                         pro(a.env);
+                                        pro(a.l);
                                         handle_t new_clos = galloct(sizeof (closure_t), CLOSURE, trace_closure, finalize_closure);
                                         closure_t *new_clos_d = d(new_clos);
                                         clos = d(f);
-                                        pop_root();
-                                        st_rpop();
+                                        pop_roots(2);
                                         *new_clos_d = (closure_t) {
-                                            .args = clos->args,
+                                            .args = a.l,
                                             .sexpr = clos->sexpr,
                                             .arity = clos->arity - num_args,
                                             .env = a.env,
                                         };
-                                        st_push_dep(new_clos);
+                                        st_push(new_clos);
                                     }
                                 }
                                 break;
@@ -331,7 +341,7 @@ handle_t eval() {
                             exit(1);
                         }
                         handle_t args = list_head(spec->data);
-                        if (tag(args) != SEXPR) {
+                        if (args && tag(args) != SEXPR) {
                             printf("fn's first argument must be an sexpr, got %d\n", tag(args));
                             exit(1);
                         }
@@ -392,7 +402,6 @@ handle_t eval() {
                 st_push(appl);
                 list_for_each_rev(h, (void (*)(handle_t))st_push);
                 st.to_eval += len;
-                printf("To eval: %lu\n", st.to_eval);
                 break;
             }
             default:
@@ -463,7 +472,12 @@ void print_value(handle_t h) {
             printf("%s", B(h) ? "true" : "false");
             break;
         case CLOSURE:
-            printf("#<closure>");
+            printf("#<closure(");
+            printf("args: ");
+            print_value(CL(h)->args);
+            printf(", env: ");
+            print_value(CL(h)->env);
+            printf(", arity: %lu)>\n", CL(h)->arity);
             break;
         case LIST:
             printf("'(");

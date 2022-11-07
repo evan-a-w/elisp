@@ -7,6 +7,7 @@
 
 #define I(h) (D((h), long long))
 #define B(h) (D((h), bool))
+#define CL(h) (D((h), closure_t*))
 #define TAG_EQ(a, b, t) ((a) == NULL_HANDLE || (b) == NULL_HANDLE || ((tag((a)) == tag((b))) && tag((a)) == (t)))
 
 typedef unsigned long (*hash_fn_t)(handle_t);
