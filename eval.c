@@ -347,6 +347,29 @@ handle_t eval() {
                         break;
                     }
                     case _Var:
+                    {
+                        st.to_eval++;
+                        handle_t l = pro(spec->data);
+                        if (list_len(l) != 3) {
+                            printf("var takes 3 arguments, got %lu\n", list_len(l));
+                            exit(1);
+                        }
+                        pro(h);
+                        handle_t name_list = pro(list_head(l));
+                        handle_t rest = list_tail(l);
+                        handle_t def = pro(list_head(rest));
+                        handle_t body = pro(list_head(list_tail(rest)));
+                        st_pop();
+                        st_push(st.env); 
+                        st_push(body);
+                        *D(h, spec_base_t *) = (spec_base_t) {
+                            .form = _VarE,
+                            .data = name_list,
+                        };
+                        st_push(def);
+                        pop_roots(5);
+                        break;
+                    }
                     case _VarE:
                     case _Let:
                     case _LetE:
