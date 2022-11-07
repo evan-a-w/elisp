@@ -159,3 +159,9 @@ handle_t list_del(handle_t l, cmp_mod_t *cmp, bool *found, handle_t *save_to) {
     pop_root();
     return nl;
 }
+
+handle_t list_last(handle_t l) {
+    if (l == NULL_HANDLE) return NULL_HANDLE;
+    while (L(l)->next != NULL_HANDLE) l = L(l)->next;
+    return L(l)->val;
+}

@@ -388,7 +388,11 @@ void trace_young(handle_t h) {
 void finalize(handle_t h) {
     if (h) {
         header_t *header = get_header(h);
-        if (header->finalize) header->finalize(header->data);
+        if (header->data && header->finalize) {
+            void *d = header->data;
+            header->data = NULL;
+            header->finalize(d);
+        }
     }
 }
 

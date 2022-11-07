@@ -8,10 +8,6 @@
 #include <sys/time.h>
 #include <math.h>
 
-#define NUM_BENCH 1000000
-#define NUM_BENCH_NUMS 10
-#define NUM_BENCH_TRIES 5
-
 unsigned long hashl(unsigned long x) {
     x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
     x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;

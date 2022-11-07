@@ -136,8 +136,6 @@ ast_t *parse_one(tokeniser_t *t) {
     case LParen:
         return parse_inside_sexpr(t);
     case Ident:
-        return make_ast((ast_t) { .type = AtomSymbol, .s = curr_token.s });
-    case Str:
         if (strcmp(curr_token.s, "T") == 0) {
             free(curr_token.s);
             return make_ast((ast_t) { .type = AtomBool, .b = true });
@@ -145,6 +143,8 @@ ast_t *parse_one(tokeniser_t *t) {
             free(curr_token.s);
             return make_ast((ast_t) { .type = AtomBool, .b = false });
         }
+        return make_ast((ast_t) { .type = AtomSymbol, .s = curr_token.s });
+    case Str:
         return make_ast((ast_t) { .type = AtomString, .s = curr_token.s });
     case Int:
         return make_ast((ast_t) { .type = AtomInt, .i = curr_token.i });
